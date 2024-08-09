@@ -1,0 +1,56 @@
+{
+  "type": "record",
+  "name": "Root4",
+  "namespace": "com.example.avro4",
+  "fields": [
+    {
+      "name": "longFieldPK",
+      "type": {
+        "type":"long",
+        "primary": true
+      }
+    },
+    {
+      "name": "stringField",
+      "type": "string"
+    },
+    {
+      "name": "timeField",
+      "type": {
+        "type":"long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "listEnums",
+      "type": {
+        "type": "array",
+        "items": "com.example.avro.Suit"
+      }
+    },
+    {
+      "name": "listNested",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "NestedRecord4",
+          "fields": [
+            {
+              "name": "stringField",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "listLinked",
+      "type": {
+        "type": "array",
+        "items": "com.example.avro.NestedRecord"
+      }
+    }
+  ],
+  "meta": "auditable"
+}

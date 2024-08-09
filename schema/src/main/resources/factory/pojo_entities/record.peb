@@ -1,0 +1,11 @@
+package {{ entity.namespace }};
+
+{% for dependecy in entity.getDependencies %}
+import {{ dependecy.fullname }};
+{% endfor %}
+
+public class {{ entity.name }}{
+{% for field in entity.fields | noRecordLists %}
+    public {{ field.type | javaType }} {{ field.name }};
+{% endfor %}
+}

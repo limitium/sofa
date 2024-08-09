@@ -1,0 +1,75 @@
+schemas:
+  - "../avro/NotUsedEnum.avsc"
+  - "../avro/SuitEnum.avsc"
+  - "../avro/SuitEnum3.avsc"
+  - "../avro/NestedNestedRecord.avsc"
+  - "../avro/NestedRecord.avsc"
+  - "../avro/NestedNestedRecord2.avsc"
+  - "../avro/NestedRecord2.avsc"
+  - "../avro/NestedRecord3.avsc"
+  - "../avro/Root.avsc"
+  - "../avro/Root2.avsc"
+  - "../avro/Root3.avsc"
+  - "../avro/Root4.avsc"
+  - "../avro/Root5.avsc"
+generators:
+  - path: "flatbuffers_entities"
+    filters:
+      white: []
+      black: [ "com.example.avro.NU" ]
+    templates:
+      namespace: "{{ schema.namespace }}.fbe"
+      name: "Fb{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname }}.fbs"
+      folder: "../../../../build/generated/sources/fbs"
+    postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/javafb {{ files | join(' ') }}"
+  - path: "flatbuffers_messages"
+    filters:
+      white: []
+      black: [ "com.example.avro.NU" ]
+    templates:
+      namespace: "{{ schema.namespace }}.fbm"
+      name: "Fb{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname }}.fbs"
+      folder: "../../../../build/generated/sources/fbs"
+    importRemap:
+      "com.example.avro.Suit":
+        namespace: "com.example.avro.fbe"
+        name: "FbSuit"
+      "com.example.avro.Suit2":
+        namespace: "com.example.avro.fbe"
+        name: "FbSuit2"
+      "com.example.avro.Suit3":
+        namespace: "com.example.avro.fbe"
+        name: "FbSuit3"
+    postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/javafb {{ files | join(' ') }}"
+  - path: "pojo_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.pojo.messages"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "../../../../build/generated/sources/java"
+  - path: "pojo_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.pojo.entities"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "../../../../build/generated/sources/java"
+  - path: "builder_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.builder.entities"
+      name: "{{ schema.name }}Builder"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "../../../../build/generated/sources/java"
+  - path: "builder_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.builder.messages"
+      name: "{{ schema.name }}Builder"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "../../../../build/generated/sources/java"

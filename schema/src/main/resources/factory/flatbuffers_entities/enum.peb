@@ -1,0 +1,7 @@
+namespace {{ namespace }};
+
+enum {{ name }}:byte {
+{% for symbol in symbols %}
+    {{ symbol }} = {{ loop.index }},
+{% endfor %}
+}

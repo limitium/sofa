@@ -1,0 +1,7 @@
+{
+    "namespace": "com.example.avro",
+    "type": "enum",
+    "name": "NU",
+    "symbols": ["UNKNOWN","ONE","TWO"],
+    "default": "UNKNOWN"
+}

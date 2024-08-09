@@ -1,0 +1,28 @@
+{
+  "type": "record",
+  "name": "Root5",
+  "namespace": "com.example.avro5",
+  "fields": [
+    {
+      "name": "longFieldPK",
+      "type": {
+        "type":"long",
+        "primary": true
+      }
+    },
+    {
+      "name": "arrOfArr",
+      "type": {
+//        "type": "array",
+//        "items": {
+//          "type": "array",
+//          "items": {
+            "type": "array",
+            "items": "com.example.avro.NestedRecord"
+//          }
+//        }
+      }
+    }
+  ],
+  "meta": "auditable"
+}

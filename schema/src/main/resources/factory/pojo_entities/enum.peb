@@ -1,0 +1,8 @@
+package {{ entity.namespace }};
+
+public enum {{ entity.name }}{
+{% for symbol in symbols %}
+    {{ symbol }}{% if loop.last %};{% else %},{% endif %}
+
+{% endfor %}
+}

@@ -1,0 +1,21 @@
+{
+    "namespace": "com.example.avro2",
+    "type": "record",
+    "name": "Root2",
+    "meta": "auditable",
+    "fields": [
+        {"name": "stringField", "type": "string"},
+        {"name": "intField", "type": "int"},
+        {"name": "longField", "type": "long"},
+        {"name": "timeField", "type": {"type":"long", "logicalType": "timestamp-millis"}},
+        {"name": "dateField", "type": {"type":"string", "logicalType": "date-YYYYMMDD", "qwe": "asd"}},
+        {"name": "floatField", "type": "float"},
+        {"name": "doubleField", "type": "double"},
+        {"name": "booleanField", "type": "boolean"},
+        {"name": "bytesField", "type": "bytes"},
+        {"name": "arrayField", "type": {"type": "array", "items": "string"}},
+        {"name": "enumField", "type": "com.example.avro.Suit"},
+        {"name": "nestedField", "type": "com.example.avro.NestedRecord"},
+        {"name": "nested3Field", "type": "com.example.avro2.NestedRecord3"}
+    ]
+}

@@ -1,0 +1,101 @@
+{% set pojo = entity | from("pojo_entities") %}
+{% set fbe = entity | from("flatbuffers_entities") %}
+package {{ entity.namespace }};
+
+import com.google.flatbuffers.FlatBufferBuilder;
+import java.nio.ByteBuffer;
+import {{ pojo.fullname }};
+import {{ fbe.fullname }};
+
+public class {{ entity.name }}{
+
+    public static {{ fbe.name }} buildFlatbufferFrom({{ pojo.name }} root) {
+        FlatBufferBuilder flatBufferBuilder = new FlatBufferBuilder().forceDefaults(true);
+
+        {% for field in entity | flattenFields | noRecordLists -%}
+            {%- if field.type.name == 'array' -%}
+                {%- if field.type.elementType.name == 'string' -%}
+                    int[] {{ field.name }}_offsets = root.{{ field.name | replace({'_':'.'}) }}.stream()
+                        .map(flatBufferBuilder::createString)
+                        .mapToInt(v -> v)
+                        .toArray();
+
+                    int {{ field.name }} = {{ fbe.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
+                {%- endif -%}
+                {%- if field.type.elementType.name == 'enum' -%}
+                    byte[] {{ field.name }}_offsets = new byte[root.{{ field.name | replace({'_':'.'}) }}.size()];
+                    for (int i = 0; i < root.listEnums.size(); i++) {
+                        listEnums_offsets[i]=(byte)root.listEnums.get(i).ordinal();
+                    }
+
+                    int {{ field.name }} = {{ fbe.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
+                {%- endif -%}
+            {%- endif -%}
+        {% endfor %}
+
+
+        flatBufferBuilder.finish({{ fbe.name }}.create{{ fbe.name }}(
+            flatBufferBuilder,
+            {% for field in entity | flattenFields('.') | noRecordLists -%}
+                {%- if field.type | fbIsPrimitive -%}
+                    root.{{ field.name }}
+                {%- else -%}
+                    {%- if field.type.name == 'string' -%}
+                        flatBufferBuilder.createString(root.{{ field.name }})
+                    {%- endif -%}
+                    {%- if field.type.name == 'enum' -%}
+                        (byte)root.{{ field.name }}.ordinal()
+                    {%- endif -%}
+                    {%- if field.type.name == 'array' -%}
+                        {{ field.name }}
+                    {%- endif -%}
+                    {%- if field.type.name == 'bytes' -%}
+                        flatBufferBuilder.createByteVector(root.{{ field.name }})
+                    {%- endif -%}
+                {%- endif -%}
+                {%- if not loop.last %},{% endif %}
+
+            {% endfor -%}
+        ));
+
+        return {{ fbe.name }}.getRootAs{{ fbe.name }}(ByteBuffer.wrap(flatBufferBuilder.sizedByteArray()));
+    }
+
+    public static {{ pojo.name }} buildPojoFrom({{ fbe.name }} fbRoot) {
+            {{ pojo.name }} root = new {{ pojo.name }}();
+
+            {% for field in entity | flattenRecords('.') %}
+                {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
+        root.{{ field.name }} = new {{ pojoRecord.fullname }}() ;
+            {% endfor %}
+
+            {% for field in entity | flattenFields('.') | noRecordLists -%}
+                {%- set fbFieldName = field.name | replace({'.':'_'}) | toCamelCase -%}
+                {%- if field.type | fbIsPrimitive -%}
+                    root.{{ field.name  }} = fbRoot.{{ fbFieldName }}();
+                {%- else -%}
+                    {%- if field.type.name == 'string' -%}
+                        root.{{ field.name }} = fbRoot.{{ fbFieldName }}();
+                    {%- endif -%}
+                    {%- if field.type.name == 'enum' -%}
+                        {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
+                        {%- set pojoEnum = field.type.enum | from("pojo_entities") -%}
+                        root.{{ field.name }} = {{ pojoEnum.fullname }}.valueOf({{  fbEnum.fullname }}.name(fbRoot.{{ fbFieldName }}()));
+                    {%- endif -%}
+                    {%- if field.type.name == 'array' -%}
+                        {%- if field.type.elementType.name == 'string' -%}
+                            root.{{ field.name }} = java.util.stream.IntStream.range(0, fbRoot.{{ fbFieldName }}Length()).mapToObj(i->fbRoot.{{ fbFieldName }}Vector().get(i)).toList();
+                        {%- endif -%}
+                    {%- endif -%}
+                    {%- if field.type.name == 'bytes' -%}
+                        root.{{ field.name }} = fbRoot.{{ fbFieldName }}AsByteBuffer().array();
+                    {%- endif -%}
+                {% endif %}
+
+            {% endfor -%}
+        return root;
+    }
+}
+
+
+

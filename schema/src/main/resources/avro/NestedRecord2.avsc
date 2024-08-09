@@ -1,0 +1,9 @@
+{
+    "namespace": "com.example.avro",
+    "type": "record",
+    "name": "NestedRecord2",
+    "fields": [
+        {"name": "stringField", "type": "string"},
+        {"name": "nnested2Field", "type": "NestedNestedRecord2"}
+    ]
+}

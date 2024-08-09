@@ -1,0 +1,7 @@
+{
+    "namespace": "com.example.avro",
+    "type": "enum",
+    "name": "Suit3",
+    "symbols": ["UNKNOWN","SPADES", "HEARTS", "DIAMONDS", "CLUBS"],
+    "default": "UNKNOWN"
+}

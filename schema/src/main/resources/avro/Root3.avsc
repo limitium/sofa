@@ -1,0 +1,118 @@
+{
+  "type": "record",
+  "name": "Root3",
+  "namespace": "com.example.avro2",
+  "fields": [
+    {
+      "name": "stringField",
+      "type": "string"
+    },
+    {
+      "name": "intField",
+      "type": "int"
+    },
+    {
+      "name": "longField",
+      "type": "long"
+    },
+    {
+      "name": "timeField",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-millis"
+      }
+    },
+    {
+      "name": "dateField",
+      "type": {
+        "type": "string",
+        "logicalType": "date-YYYYMMDD",
+        "qwe": "asd"
+      }
+    },
+    {
+      "name": "floatField",
+      "type": "float"
+    },
+    {
+      "name": "doubleField",
+      "type": "double"
+    },
+    {
+      "name": "booleanField",
+      "type": "boolean"
+    },
+    {
+      "name": "bytesField",
+      "type": "bytes"
+    },
+    {
+      "name": "arrayField",
+      "type": {
+        "type": "array",
+        "items": "string"
+      }
+    },
+    {
+      "name": "enumField",
+      "type": {
+        "type": "enum",
+        "name": "Suit2",
+        "namespace": "com.example.avro",
+        "symbols": [
+          "UNKNOWN",
+          "SPADES",
+          "HEARTS",
+          "DIAMONDS",
+          "CLUBS"
+        ],
+        "default": "UNKNOWN"
+      }
+    },
+    {
+      "name": "nested33Field",
+      "type": {
+        "type": "record",
+        "name": "NestedRecord33",
+        "namespace": "com.example.avro",
+        "fields": [
+          {
+            "name": "stringField",
+            "type": "string"
+          },
+          {
+            "name": "nnested33Field",
+            "type": {
+              "type": "record",
+              "name": "NestedNestedRecord33",
+              "fields": [
+                {
+                  "name": "stringField",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "nested333Field",
+      "type": {
+        "type": "record",
+        "name": "NestedRecord333",
+        "fields": [
+          {
+            "name": "longField",
+            "type": "long"
+          },
+          {
+            "name": "nnestedField",
+            "type": "com.example.avro.NestedNestedRecord"
+          }
+        ]
+      }
+    }
+  ],
+  "meta": "auditable"
+}

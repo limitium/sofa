@@ -39,6 +39,10 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
         return owners;
     }
 
+    public boolean isDependent(){
+        return !owners.isEmpty();
+    }
+
     public record Field(
             String name,
             Type type

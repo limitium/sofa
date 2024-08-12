@@ -15,20 +15,4 @@ public class {{ entity.name }}{
         public {{ field.type | javaType }} {{ field.name }};
     {% endif %}
 {% endfor %}
-
-{% if entity.owners.size > 0 %}
-        //Links do dependents {{ entity.owners.size }} total
-        //Todo: check entities
-        {% for owner in entity.owners %}
-            //{{ owner.name }}
-
-        {% endfor %}
-    {% if entity.owners.size == 1 %}
-        public long {{ entity.owners[0].name | toCamelCase }}Id;
-    {% endif %}
-    {% if entity.owners.size > 1 %}
-        public String ownerType;
-        public long ownerId;
-    {% endif %}
-{% endif %}
 }

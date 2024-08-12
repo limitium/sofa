@@ -55,8 +55,8 @@ public class JavaTypeConverter implements TypeConverter {
                 }
                 yield "java.util.List<" + this.getType(arrayType.getElementType()) + ">";
             }
-            case Type.RecordType recordType -> recordType.getRecord().getName();
-            case Type.EnumType enumType -> enumType.getEnum().getName();
+            case Type.RecordType recordType -> recordType.getRecord().getFullname();
+            case Type.EnumType enumType -> enumType.getEnum().getFullname();
             case Type.MapType mapType -> throw new IllegalArgumentException("Unsupported Avro type: " + type.getName());
             case Type.NullType nullType -> throw new IllegalArgumentException("Unsupported Avro type: " + type.getName());
             case Type.UnionType unionType -> throw new IllegalArgumentException("Unsupported Avro type: " + type.getName());

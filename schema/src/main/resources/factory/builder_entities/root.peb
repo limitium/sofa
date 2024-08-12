@@ -66,7 +66,10 @@ public class {{ entity.name }}{
 
             {% for field in entity | flattenRecords('.') %}
                 {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
-        root.{{ field.name }} = new {{ pojoRecord.fullname }}() ;
+                {% if not pojoRecord.dependent %}
+                    {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}
+                {% endif %}
+                root.{{ field.name }} = new {{ pojoRecord.fullname }}() ;
             {% endfor %}
 
             {% for field in entity | flattenFields('.') | noRecordLists -%}
@@ -79,7 +82,7 @@ public class {{ entity.name }}{
                     {%- endif -%}
                     {%- if field.type.name == 'enum' -%}
                         {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
-                        {%- set pojoEnum = field.type.enum | from("pojo_entities") -%}
+                        {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
                         root.{{ field.name }} = {{ pojoEnum.fullname }}.valueOf({{  fbEnum.fullname }}.name(fbRoot.{{ fbFieldName }}()));
                     {%- endif -%}
                     {%- if field.type.name == 'array' -%}

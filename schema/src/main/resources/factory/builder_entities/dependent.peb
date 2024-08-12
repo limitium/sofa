@@ -72,11 +72,13 @@ public class {{ entity.name }}{
     public static {{ pojo.name }} buildPojoFrom({{ fbe.name }} fbDependent) {
         {{ pojo.name }} dependent = new {{ pojo.name }}();
 
-        {% for field in entity | flattenRecords('.') %}
-        {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
-            dependent.{{ field.name }} = new {{ pojoRecord.fullname }}() ;
-
-        {% endfor %}
+            {% for field in entity | flattenRecords('.') %}
+                {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
+                {% if not pojoRecord.dependent %}
+                    {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}
+                {% endif %}
+                dependent.{{ field.name }} = new {{ pojoRecord.fullname }}() ;
+            {% endfor %}
 
         {% for field in entity | flattenFields('.') | noRecordLists -%}
             {%- set fbFieldName = field.name | replace({'.':'_'}) | toCamelCase -%}
@@ -88,7 +90,7 @@ public class {{ entity.name }}{
                 {%- endif -%}
                 {%- if field.type.name == 'enum' -%}
                     {%- set fbenum = field.type.enum | from("flatbuffers_entities") -%}
-                    {%- set pojoEnum = field.type.enum | from("pojo_entities") -%}
+                    {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
                     dependent.{{ field.name }} = {{ pojoEnum.fullname }}.valueOf({{  fbenum.fullname }}.name(fbDependent.{{ fbFieldName }}()));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}

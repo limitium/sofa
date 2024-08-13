@@ -4,34 +4,21 @@ include "{{ child.fullname }}.fbs";
 
 namespace {{ entity.namespace }};
 
-{% macro flatten_fields(prefix, entity) %}
-        {%- if prefix is not empty -%}
-            {%- set prefix = prefix + "_" -%}
-            {%- else -%}
-            {%- set prefix = "" -%}
-        {%- endif -%}
-        {%- for field in entity.fields | noRecordLists -%}
-            {%- set fieldName = prefix + field.name -%}
-            {% if field.type.name == "record" %}
-            {{- flatten_fields(fieldName, field.type.record ) -}}
-                {% else %}
-            {{ fieldName | toSnakeCase | lower }}: {{ field.type | fbType }};
-{% endif %}{# unable to fix #}
-        {%- endfor -%}
-    {% endmacro %}
-
 table {{ entity.name }}{
-{{ flatten_fields(null, entity ) }}
-{% if entity.owners.size > 0 %}
+    {% for field in entity | flattenFields | noRecordLists -%}
+        {{ field.name | toSnakeCase | lower }}: {{ field.type | fbType }};
+    {% endfor %}
+
+    {% if entity.owners.size > 0 %}
 
             //Links do dependents {{ entity.owners.size }} total
-{% if entity.owners.size == 1 %}
+        {% if entity.owners.size == 1 %}
             {{ entity.owners[0].name | toSnakeCase | lower }}_id: {{  entity.owners[0].primaryKey.type | fbType }};
-{% endif %}
-{% if entity.owners.size > 1 %}
-            owner_entity: string; //{% for owner in entity.owners %}{{ owner.name }},{% endfor %}
-
+        {% endif %}
+        {% if entity.owners.size > 1 %}
+            //{% for owner in entity.owners %}{{ owner.name }},{% endfor %}
+            owner_entity: string;
             owner_id: long;
-{% endif %}
-{% endif %}
+        {% endif %}
+    {% endif %}
 }

@@ -2,17 +2,6 @@ package {{ entity.namespace }};
 
 public class {{ entity.name }}{
 {% for field in entity.fields | noRecordLists %}
-    {% if field.type.name == "enum" %}
-        {% set enum = field.type.enum | from('pojo_messages') %}
-        public {{ enum.fullname }} {{ field.name }};
-    {% elseif field.type.name == "record" %}
-        {% set record = field.type.record %}
-        {% if not record.dependent %}
-            {% set record = record | from('pojo_messages') %}
-        {% endif %}
-        public {{ record.fullname }} {{ field.name }};
-    {% else %}
-        public {{ field.type | javaType }} {{ field.name }};
-    {% endif %}
+    public {{ field.type | javaType }} {{ field.name }};
 {% endfor %}
 }

@@ -34,16 +34,7 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname }}.fbs"
       folder: "../../build/generated/sources/fbs"
-    importRemap:
-      "com.example.avro.Suit":
-        namespace: "com.example.avro.fbe"
-        name: "FbSuit"
-      "com.example.avro.Suit2":
-        namespace: "com.example.avro.fbe"
-        name: "FbSuit2"
-      "com.example.avro.Suit3":
-        namespace: "com.example.avro.fbe"
-        name: "FbSuit3"
+    overrides: "flatbuffers_messages"
     postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../build/generated/sources/java {{ files | join(' ') }}"
   - path: "pojo_messages"
     templates:
@@ -59,6 +50,7 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "../../build/generated/sources/java"
+    overrides: "pojo_messages"
   - path: "builder_messages"
     templates:
       namespace: "{{ schema.namespace }}.builder.messages"
@@ -73,3 +65,4 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "../../build/generated/sources/java"
+    overrides: "builder_messages"

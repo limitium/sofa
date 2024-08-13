@@ -7,5 +7,5 @@ public class GeneratorConfig {
     public FiltersConfig filters;
     public TemplatesConfig templates;
     public String postCall;
-    public Map<String, RemapConfig> importRemap;
+    public String overrides;
 }

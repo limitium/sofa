@@ -1,7 +1,6 @@
 package art.limitium;
 
 import art.limitium.config.FiltersConfig;
-import art.limitium.config.RemapConfig;
 import art.limitium.schema.Entity;
 import art.limitium.schema.EnumEntity;
 import art.limitium.schema.RecordEntity;
@@ -21,18 +20,18 @@ public class Generator {
     private final String name;
     private final Map<String, PebbleTemplate> mainTemplates;
     public Templates templates;
-    private final Map<String, RemapConfig> importRemap;
+    private final String overrides;
     private final FiltersConfig filters;
     public PebbleTemplate postCall;
     private final Map<String, Map<String, Entity>> schemas;
     private final String basePath;
     private String folder;
 
-    public Generator(String name, Map<String, PebbleTemplate> mainTemplates, Templates templates, Map<String, RemapConfig> importRemap, FiltersConfig filters, PebbleTemplate postCall, Map<String, Map<String, Entity>> schemas, String basePath) {
+    public Generator(String name, Map<String, PebbleTemplate> mainTemplates, Templates templates, String overrides, FiltersConfig filters, PebbleTemplate postCall, Map<String, Map<String, Entity>> schemas, String basePath) {
         this.name = name;
         this.mainTemplates = mainTemplates;
         this.templates = templates;
-        this.importRemap = importRemap;
+        this.overrides = overrides;
         this.filters = filters;
         this.postCall = postCall;
         this.schemas = schemas;
@@ -50,21 +49,22 @@ public class Generator {
     }
 
     public void generate(List<AvroEntity> avroEntities) throws IOException {
-        Map<String, Entity> entities = new LinkedHashMap<>();
+        Map<String, Entity> entities = new HashMap<>();
         Map<String, Entity> mapByAvroName = new HashMap<>();
+        List<Entity> toGenerate = new ArrayList<>();
+
 
         for (AvroEntity avroEntity : avroEntities) {
+            boolean shouldBeGenerated = shouldBeGenerated(avroEntity);
+
             String namespace = generateNamespace(avroEntity.schema);
             String name = generateName(avroEntity.schema);
-            if (importRemap != null && importRemap.containsKey(avroEntity.schema.getFullName())) {
-                RemapConfig remapConfig = importRemap.get(avroEntity.schema.getFullName());
-                Factory.logger.info("Remap from {} {} to {} {}", namespace, name, remapConfig.namespace, remapConfig.name);
-                if (remapConfig.namespace != null) {
-                    namespace = remapConfig.namespace;
-                }
-                if (remapConfig.name != null) {
-                    name = remapConfig.name;
-                }
+
+            if (overrides != null && !shouldBeGenerated) {
+                Factory.logger.info("Take entity `{}` from `{}`", avroEntity.getFullname(), overrides);
+                Entity parentEntity = schemas.get(overrides).get(avroEntity.getFullname());
+                namespace = parentEntity.getNamespace();
+                name = parentEntity.getName();
             }
 
             String fullname = generateFullname(namespace, name, avroEntity.schema);
@@ -72,10 +72,9 @@ public class Generator {
             Factory.logger.debug("Create entity `{}` at `{}` with `{}`", name, namespace, fullname);
 
 
+            Entity entity = null;
             if (avroEntity.schema.getType() == Schema.Type.ENUM) {
-                EnumEntity enumEntity = new EnumEntity(namespace, name, fullname, avroEntity.schema, avroEntity.schema.getEnumSymbols());
-                entities.put(enumEntity.getFullname(), enumEntity);
-                mapByAvroName.put(avroEntity.getFullname(), enumEntity);
+                entity = new EnumEntity(namespace, name, fullname, avroEntity.schema, avroEntity.schema.getEnumSymbols());
             }
             if (avroEntity.schema.getType() == Schema.Type.RECORD) {
                 List<RecordEntity.Field> fields = new ArrayList<>();
@@ -85,10 +84,15 @@ public class Generator {
                     Factory.logger.debug("Create field `{}` from type `{}` to `{}`", field.name(), field.schema().getType(), type);
                     fields.add(new RecordEntity.Field(field.name(), type));
                 }
+                entity = new RecordEntity(namespace, name, fullname, avroEntity.schema, fields, avroEntity.isRoot);
+            }
 
-                RecordEntity recordEntity = new RecordEntity(namespace, name, fullname, avroEntity.schema, fields, avroEntity.isRoot);
-                mapByAvroName.put(avroEntity.getFullname(), recordEntity);
-                entities.put(recordEntity.getFullname(), recordEntity);
+            if (entity != null) {
+                entities.put(entity.getFullname(), entity);
+                mapByAvroName.put(avroEntity.getFullname(), entity);
+                if (shouldBeGenerated) {
+                    toGenerate.add(entity);
+                }
             }
         }
         Factory.logger.info("{} Entities created", entities.size());
@@ -113,35 +117,15 @@ public class Generator {
             }
         }
         Factory.logger.info("Relations created");
+
+
         entities.values().stream().filter(RecordEntity.class::isInstance).map(RecordEntity.class::cast)
                 .filter(Predicate.not(recordEntity -> recordEntity.getOwners().isEmpty()))
                 .flatMap(recordEntity -> recordEntity.getOwners().stream())
                 .forEach(RecordEntity::getPrimaryKey);
 
-        List<String> files = new ArrayList<>();
-        for (Entity entity : entities.values()) {
-            if (filters != null) {
-                //@todo: enforce white list items be in scope of work
-                if (filters.white != null && !filters.white.isEmpty() && !filters.white.contains(entity.getSchema().getFullName())) {
-                    Factory.logger.info("Skip entity `{}` by white filter", entity.getSchema().getFullName());
-                    continue;
-                }
-                if (filters.black != null && filters.black.contains(entity.getSchema().getFullName())) {
-                    Factory.logger.info("Skip entity `{}` by black filter", entity.getSchema().getFullName());
-                    continue;
-                }
-            }
 
-            if ((mainTemplates.containsKey("enum") && entity instanceof EnumEntity)
-                    || (mainTemplates.containsKey("root") && entity instanceof RecordEntity r && r.isRoot())
-                    || (mainTemplates.containsKey("dependent") && entity instanceof RecordEntity re && !re.getOwners().isEmpty())
-                    || mainTemplates.containsKey("record")) {
-
-                files.add(generateFor(entity, entities));
-            } else {
-                Factory.logger.info("Skip entity `{}` no proper template", entity.getFullname());
-            }
-        }
+        List<String> files = toGenerate.stream().map(this::generateFor).toList();
 
         schemas.put(name, mapByAvroName);
 
@@ -157,12 +141,35 @@ public class Generator {
         }
     }
 
-    public String generateFor(Entity entity, Map<String, Entity> entities) throws IOException {
+    private boolean shouldBeGenerated(AvroEntity entity) {
+        if (filters != null) {
+            //@todo: enforce white list items be in scope of work
+            if (filters.white != null && !filters.white.isEmpty() && !filters.white.contains(entity.schema.getFullName())) {
+                Factory.logger.info("Skip entity `{}` by white filter", entity.schema.getFullName());
+                return false;
+            }
+            if (filters.black != null && filters.black.contains(entity.schema.getFullName())) {
+                Factory.logger.info("Skip entity `{}` by black filter", entity.schema.getFullName());
+                return false;
+            }
+        }
+
+        if ((mainTemplates.containsKey("enum") && entity.schema.getType() == Schema.Type.ENUM)
+                || (mainTemplates.containsKey("root") && entity.schema.getType() == Schema.Type.RECORD && entity.isRoot)
+                || (mainTemplates.containsKey("dependent") && entity.schema.getType() == Schema.Type.RECORD && !entity.owners.isEmpty())
+                || mainTemplates.containsKey("record")) {
+            return true;
+        }
+
+        Factory.logger.info("Skip entity `{}` no proper template", entity.getFullname());
+        return false;
+    }
+
+    public String generateFor(Entity entity) {
         Map<String, Object> context = new HashMap<>();
         context.put("namespace", entity.getNamespace());
         context.put("name", entity.getName());
         context.put("entity", entity);
-        context.put("entities", entities);
 
         String generatedFolder = generateFolder(entity);
         folder = basePath + "/" + generatedFolder;
@@ -172,7 +179,11 @@ public class Generator {
         if (!folder.endsWith("/")) {
             folder += "/";
         }
-        Files.createDirectories(Paths.get(folder));
+        try {
+            Files.createDirectories(Paths.get(folder));
+        } catch (IOException e) {
+            throw new RuntimeException("Unable to create folder " + folder, e);
+        }
 
         String fileName = folder + generateFilename(entity);
         PebbleTemplate template;
@@ -201,7 +212,11 @@ public class Generator {
                 folderPath = basePath + "/" + folderPath;
             }
 
-            Files.createDirectories(Paths.get(folderPath));
+            try {
+                Files.createDirectories(Paths.get(folderPath));
+            } catch (IOException e) {
+                throw new RuntimeException("Unable to create folder " + folder, e);
+            }
         }
         evaluateTemplateToFile(template, context, fileName);
         return fileName;

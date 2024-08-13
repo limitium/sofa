@@ -4,24 +4,10 @@ include "{{ child.fullname }}.fbs";
 
 namespace {{ entity.namespace }};
 
-{% macro flatten_fields(prefix, entity) %}
-        {%- if prefix is not empty -%}
-            {%- set prefix = prefix + "_" -%}
-            {%- else -%}
-            {%- set prefix = "" -%}
-        {%- endif -%}
-        {%- for field in entity.fields -%}
-            {%- set fieldName = prefix + field.name -%}
-            {% if field.type.name == "record" %}
-            {{- flatten_fields(fieldName, field.type.record ) -}}
-                {% else %}
-            {{ fieldName | toSnakeCase | lower }}: {{ field.type | fbType }};
-{% endif %}{# unable to fix #}
-        {%- endfor -%}
-    {% endmacro %}
-
 table {{ entity.name }}{
-{{ flatten_fields(null, entity ) }}
+    {% for field in entity | flattenFields -%}
+        {{ field.name | toSnakeCase | lower }}: {{ field.type | fbType }};
+    {% endfor %}
 }
 
 root_type {{ entity.name }};

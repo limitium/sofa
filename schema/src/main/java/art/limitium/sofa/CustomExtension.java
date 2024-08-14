@@ -1,6 +1,5 @@
 package art.limitium.sofa;
 
-import art.limitium.schema.*;
 import art.limitium.sofa.schema.*;
 import com.mitchellbosecke.pebble.error.PebbleException;
 import com.mitchellbosecke.pebble.extension.AbstractExtension;

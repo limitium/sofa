@@ -1,6 +1,4 @@
-package art.limitium.config;
-
-import java.util.Map;
+package art.limitium.sofa.config;
 
 public class GeneratorConfig {
     public String path;

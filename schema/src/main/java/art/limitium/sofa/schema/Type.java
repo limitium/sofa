@@ -1,4 +1,4 @@
-package art.limitium.schema;
+package art.limitium.sofa.schema;
 
 import org.apache.avro.LogicalType;
 import org.apache.avro.LogicalTypes;

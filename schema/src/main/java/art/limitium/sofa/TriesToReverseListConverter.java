@@ -1,7 +1,7 @@
-package art.limitium;
+package art.limitium.sofa;
 
-import art.limitium.schema.NamedEntity;
-import art.limitium.schema.Owner;
+import art.limitium.sofa.schema.NamedEntity;
+import art.limitium.sofa.schema.Owner;
 
 import java.util.LinkedHashMap;
 import java.util.List;

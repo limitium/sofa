@@ -1,4 +1,4 @@
-package art.limitium;
+package art.limitium.sofa;
 
 import org.apache.avro.Schema;
 

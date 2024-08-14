@@ -1,10 +1,10 @@
-package art.limitium;
+package art.limitium.sofa;
 
-import art.limitium.config.FiltersConfig;
-import art.limitium.schema.Entity;
-import art.limitium.schema.EnumEntity;
-import art.limitium.schema.RecordEntity;
-import art.limitium.schema.Type;
+import art.limitium.sofa.config.FiltersConfig;
+import art.limitium.sofa.schema.Entity;
+import art.limitium.sofa.schema.EnumEntity;
+import art.limitium.sofa.schema.RecordEntity;
+import art.limitium.sofa.schema.Type;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import org.apache.avro.Schema;
 

@@ -1,4 +1,4 @@
-package art.limitium.config;
+package art.limitium.sofa.config;
 
 import java.util.List;
 

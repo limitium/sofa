@@ -1,7 +1,7 @@
-package art.limitium.ext;
+package art.limitium.sofa.ext;
 
-import art.limitium.schema.Type;
-import art.limitium.schema.TypeConverter;
+import art.limitium.sofa.schema.Type;
+import art.limitium.sofa.schema.TypeConverter;
 import org.apache.commons.compress.utils.Sets;
 
 import java.util.Set;

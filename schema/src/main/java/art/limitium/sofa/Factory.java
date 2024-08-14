@@ -1,12 +1,12 @@
-package art.limitium;
+package art.limitium.sofa;
 
-import art.limitium.config.FactoryConfig;
-import art.limitium.ext.FBFactoryConverter;
-import art.limitium.ext.FBTypeConverter;
-import art.limitium.ext.FbIsPrimitiveConverter;
-import art.limitium.ext.JavaTypeConverter;
-import art.limitium.schema.Entity;
-import art.limitium.schema.TypeConverter;
+import art.limitium.sofa.config.FactoryConfig;
+import art.limitium.sofa.ext.FBFactoryConverter;
+import art.limitium.sofa.ext.FBTypeConverter;
+import art.limitium.sofa.ext.FbIsPrimitiveConverter;
+import art.limitium.sofa.ext.JavaTypeConverter;
+import art.limitium.sofa.schema.Entity;
+import art.limitium.sofa.schema.TypeConverter;
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.loader.DelegatingLoader;
 import com.mitchellbosecke.pebble.loader.FileLoader;

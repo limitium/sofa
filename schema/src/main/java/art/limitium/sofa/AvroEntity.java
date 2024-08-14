@@ -1,8 +1,8 @@
-package art.limitium;
+package art.limitium.sofa;
 
-import art.limitium.schema.Dependency;
-import art.limitium.schema.NamedEntity;
-import art.limitium.schema.Owner;
+import art.limitium.sofa.schema.Dependency;
+import art.limitium.sofa.schema.NamedEntity;
+import art.limitium.sofa.schema.Owner;
 import org.apache.avro.Schema;
 
 import java.util.ArrayList;

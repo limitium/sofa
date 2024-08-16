@@ -195,6 +195,5 @@ public class Factory {
         return stringWriter.toString();
     }
 }
-//todo: With allowed 1-N, make recursive objects creation, use dependent builders
 //todo: Do not override if overridden entity structure exactly the same
 //todo: Provide references to two owners: direct owner and flatten owner to root or to the upper dependent

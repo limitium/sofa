@@ -16,12 +16,13 @@ public class {{ entity.name }}{
             {%- if field.type.name == 'array' -%}
                 {%- if field.type.elementType.name == 'string' -%}
 
+
                     int[] {{ field.name }}_offsets = root.{{ field.name | replace({'_':'.'}) }}.stream()
                         .map(flatBufferBuilder::createString)
                         .mapToInt(v -> v)
                         .toArray();
-
                     int {{ field.name }} = {{ fbm.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
+
                 {%- endif -%}
                 {%- if field.type.elementType.name == 'enum' -%}
 
@@ -29,17 +30,17 @@ public class {{ entity.name }}{
                     for (int i = 0; i < root.{{ field.name }}.size(); i++) {
                         {{ field.name }}_offsets[i]=(byte)root.{{ field.name }}.get(i).ordinal();
                     }
-
                     int {{ field.name }} = {{ fbm.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
+
                 {%- endif -%}
                 {%- if field.type.elementType.name == 'record' -%}
 
                     int[] {{ field.name }}_offsets = new int[root.{{ field.name | replace({'_':'.'}) }}.size()];
                     for (int i = 0; i < root.{{ field.name }}.size(); i++) {
-                        {{ field.name }}_offsets[i]=(byte)root.{{ field.name }}.get(i).ordinal();
+                        {{ field.name }}_offsets[i]={{ field.type.elementType.record.fullname }}.buildFlatbufferFrom(flatBufferBuilder, root.{{ field.name }}.get(i));
                     }
-
                     int {{ field.name }} = {{ fbm.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
+
                 {%- endif -%}
             {%- endif -%}
         {% endfor %}
@@ -97,8 +98,12 @@ public class {{ entity.name }}{
                     {%- if field.type.elementType.name == 'string' -%}
                         root.{{ field.name }} = java.util.stream.IntStream.range(0, fbRoot.{{ fbFieldName }}Length()).mapToObj(i->fbRoot.{{ fbFieldName }}Vector().get(i)).toList();
                     {%- endif -%}
+                    {%- if field.type.elementType.name == 'enum' -%}
+                        {% set pojoEnum = field.type.elementType.enum | from("pojo_messages") %}
+                        root.{{ field.name }} = java.util.stream.IntStream.range(0, fbRoot.{{ fbFieldName }}Length()).mapToObj(i->{{ pojoEnum.fullname }}.values()[fbRoot.{{ fbFieldName }}Vector().get(i)]).toList();
+                    {%- endif -%}
                     {%- if field.type.elementType.name == 'record' -%}
-                        root.{{ field.name }} = java.util.stream.IntStream.range(0, fbRoot.{{ fbFieldName }}Length()).mapToObj(i->fbRoot.{{ fbFieldName }}Vector().get(i)).toList();
+                        root.{{ field.name }} = java.util.stream.IntStream.range(0, fbRoot.{{ fbFieldName }}Length()).mapToObj(i->{{ field.type.elementType.record.fullname }}.buildPojoFrom(fbRoot.{{ fbFieldName }}Vector().get(i))).toList();
                     {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}

@@ -48,15 +48,16 @@ public class {{ entity.name }}{
             ,
         {% endfor %}
 
-        {% if entity.owners.size > 0 %}
-            //Links do dependents {{ entity.owners.size }} total
-        {% if entity.owners.size == 1 %}
-            {% set owner = entity.owners[0] | from("pojo_entities") %}
+        {% set owners = entity | flattenOwners %}
+        {% if owners.size > 0 %}
+            //Links do dependents {{ owners.size }} total
+        {% if owners.size == 1 %}
+            {% set owner = owners[0] | from("pojo_entities") %}
                 dependent.{{ owner.name | toCamelCase }}Id
         {% endif %}
-            {% if entity.owners.size > 1 %}
+            {% if owners.size > 1 %}
                 //Todo: check entities
-                {% for owner in entity.owners %}
+                {% for owner in owners %}
                     //{{ owner.name }}
 
                 {% endfor %}
@@ -105,13 +106,13 @@ public class {{ entity.name }}{
 
         {% endfor -%}
 
-        {% if entity.owners.size > 0 %}
-                //Links do dependents {{ entity.owners.size }} total
-            {% if entity.owners.size == 1 %}
-                {% set owner = entity.owners[0] | from("pojo_entities") %}
+        {% if owners.size > 0 %}
+                //Links do dependents {{ owners.size }} total
+            {% if owners.size == 1 %}
+                {% set owner = owners[0] | from("pojo_entities") %}
                 dependent.{{ owner.name | toCamelCase }}Id = fbDependent.{{ fbe.owners[0].name | toCamelCase }}Id();
             {% endif %}
-            {% if entity.owners.size > 1 %}
+            {% if owners.size > 1 %}
                 dependent.ownerType = fbDependent.ownerEntity();
                 dependent.ownerId = fbDependent.ownerId();
             {% endif %}

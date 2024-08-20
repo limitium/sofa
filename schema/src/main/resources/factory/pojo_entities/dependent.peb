@@ -5,17 +5,18 @@ public class {{ entity.name }}{
     public {{ field.type | javaType }} {{ field.name }};
 {% endfor %}
 
-{% if entity.owners.size > 0 %}
-    //Links do dependents {{ entity.owners.size }} total
+{% set owners = entity | flattenOwners %}    
+{% if owners.size > 0 %}
+    //Links do dependents {{ owners.size }} total
     //Todo: check entities
-    {% for owner in entity.owners %}
+    {% for owner in owners %}
         //{{ owner.name }}
 
     {% endfor %}
-    {% if entity.owners.size == 1 %}
-        public long {{ entity.owners[0].name | toCamelCase }}Id;
+    {% if owners.size == 1 %}
+        public long {{ owners[0].name | toCamelCase }}Id;
     {% endif %}
-    {% if entity.owners.size > 1 %}
+    {% if owners.size > 1 %}
         public String ownerType;
         public long ownerId;
     {% endif %}

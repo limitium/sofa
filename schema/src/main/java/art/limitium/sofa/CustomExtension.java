@@ -38,10 +38,11 @@ public class CustomExtension extends AbstractExtension {
         filters.put("dependenciesRecursiveToClosestDependent", new DependenciesRecursiveToClosestDependent());
         filters.put("flattenFields", new FlattenFields());
         filters.put("flattenRecords", new FlattenRecords());
+        filters.put("flattenOwners", new FlattenOwners());
         filters.put("enums", new EnumFilter());
         filters.put("from", new FromFilter(schemas));
         filters.put("noRecordLists", new NoRecordListFilter());
-        filters.put("recordLists", new FlattenFields());
+        filters.put("recordLists", new RecordListFilter());
         typeConverters.forEach(c -> filters.put(c.getName(), new TypeFilter(c)));
         return filters;
     }
@@ -348,6 +349,34 @@ public class CustomExtension extends AbstractExtension {
                     flattenFields(recordType.getRecord(), fieldName, flattenFields, joiner);
                 }
             }
+        }
+
+        @Override
+        public List<String> getArgumentNames() {
+            return null;
+        }
+    }
+
+    public static class FlattenOwners implements Filter {
+
+        @Override
+        public Object apply(Object o, Map<String, Object> args, PebbleTemplate pebbleTemplate, EvaluationContext evaluationContext, int i) throws PebbleException {
+            if (o instanceof RecordEntity record && record.isDependent()) {
+                Set<RecordEntity> flattenOwners = new HashSet<>();
+                flattenOwners(record.getOwners(), flattenOwners);
+                return flattenOwners.stream().toList();
+            }
+            return o;
+        }
+
+        private void flattenOwners(List<RecordEntity> owners, Set<RecordEntity> flattenOwners) {
+            owners.forEach(o -> {
+                if (o.isDependent() || o.isRoot()) {
+                    flattenOwners.add(o);
+                } else {
+                    flattenOwners(o.getOwners(), flattenOwners);
+                }
+            });
         }
 
         @Override

@@ -119,12 +119,6 @@ public class Generator {
         Factory.logger.info("Relations created");
 
 
-        entities.values().stream().filter(RecordEntity.class::isInstance).map(RecordEntity.class::cast)
-                .filter(Predicate.not(recordEntity -> recordEntity.getOwners().isEmpty()))
-                .flatMap(recordEntity -> recordEntity.getOwners().stream())
-                .forEach(RecordEntity::getPrimaryKey);
-
-
         List<String> files = toGenerate.stream().map(this::generateFor).toList();
 
         schemas.put(name, mapByAvroName);

@@ -196,4 +196,3 @@ public class Factory {
     }
 }
 //todo: Do not override if overridden entity structure exactly the same
-//todo: Provide references to two owners: direct owner and flatten owner to root or to the upper dependent

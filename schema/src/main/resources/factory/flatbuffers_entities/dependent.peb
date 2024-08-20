@@ -9,14 +9,15 @@ table {{ entity.name }}{
         {{ field.name | toSnakeCase | lower }}: {{ field.type | fbType }};
     {% endfor %}
 
-    {% if entity.owners.size > 0 %}
+    {% set owners = entity | flattenOwners %}
+    {% if owners.size > 0 %}
 
-            //Links do dependents {{ entity.owners.size }} total
-        {% if entity.owners.size == 1 %}
-            {{ entity.owners[0].name | toSnakeCase | lower }}_id: {{  entity.owners[0].primaryKey.type | fbType }};
+            //Links do dependents {{ owners.size }} total
+        {% if owners.size == 1 %}
+            {{ owners[0].name | toSnakeCase | lower }}_id: {{  owners[0].primaryKey.type | fbType }};
         {% endif %}
-        {% if entity.owners.size > 1 %}
-            //{% for owner in entity.owners %}{{ owner.name }},{% endfor %}
+        {% if owners.size > 1 %}
+            //{% for owner in owners %}{{ owner.name }},{% endfor %}
             owner_entity: string;
             owner_id: long;
         {% endif %}

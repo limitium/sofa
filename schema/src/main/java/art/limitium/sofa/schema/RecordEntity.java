@@ -6,6 +6,9 @@ import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class RecordEntity extends Entity implements Owner<Entity>, Dependency<RecordEntity> {
     @Nonnull
@@ -15,6 +18,7 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
     private final List<RecordEntity> owners = new ArrayList<>();
 
     private final boolean isRoot;
+
     public RecordEntity(String namespace, String name, String fullName, @Nonnull Schema schema, @Nonnull List<Field> fields, boolean isRoot) {
         super(namespace, name, fullName, schema);
         this.fields = Collections.unmodifiableList(fields);
@@ -39,7 +43,7 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
         return owners;
     }
 
-    public boolean isDependent(){
+    public boolean isDependent() {
         return !owners.isEmpty();
     }
 

@@ -21,7 +21,7 @@ repositories {
 subprojects {
     apply plugin: 'java'
 
-    version '1.0-SNAPSHOT'
+    version '0.1-SNAPSHOT'
 
     group 'art.limitium.sofa'
 

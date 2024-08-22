@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.function.Predicate;
 
 public class Generator {
     private final String name;
@@ -48,7 +47,7 @@ public class Generator {
         }
     }
 
-    public void generate(List<AvroEntity> avroEntities) throws IOException {
+    public void generate(List<AvroEntity> avroEntities) {
         Map<String, Entity> entities = new HashMap<>();
         Map<String, Entity> mapByAvroName = new HashMap<>();
         List<Entity> toGenerate = new ArrayList<>();
@@ -129,9 +128,13 @@ public class Generator {
                 postCall = basePath + "/" + postCall;
             }
             Factory.logger.info("Run postCall: {}", postCall);
-            Process exec = Runtime.getRuntime().exec(postCall);
-            String out = new String(exec.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            Factory.logger.info("Output: {}", out);
+            try {
+                Process exec = Runtime.getRuntime().exec(postCall);
+                String out = new String(exec.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                Factory.logger.info("Output: {}", out);
+            } catch (IOException e) {
+                throw new RuntimeException("Unable to run postCall", e);
+            }
         }
     }
 

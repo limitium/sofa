@@ -8,6 +8,7 @@ import art.limitium.sofa.ext.JavaTypeConverter;
 import art.limitium.sofa.schema.Entity;
 import art.limitium.sofa.schema.TypeConverter;
 import com.mitchellbosecke.pebble.PebbleEngine;
+import com.mitchellbosecke.pebble.loader.ClasspathLoader;
 import com.mitchellbosecke.pebble.loader.DelegatingLoader;
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.StringLoader;
@@ -22,6 +23,7 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -44,7 +46,7 @@ public class Factory {
             .build();
 
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         if (args.length < 1) {
             throw new RuntimeException("Path to generator definition file is missed");
         }
@@ -55,7 +57,12 @@ public class Factory {
         String basePath = configFile.getParent();
         logger.info("Base path is set to {}", basePath);
 
-        FactoryConfig factoryConfig = loadFactoryConfig(configFile);
+        FactoryConfig factoryConfig;
+        try {
+            factoryConfig = loadFactoryConfig(configFile);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("Unable to load config file from " + configPath, e);
+        }
 
         logger.info("Loading schemas {}: \r\n{}", factoryConfig.schemas.size(), String.join("\r\n", factoryConfig.schemas));
         SchemaDefinition schemaDefinition = loadSchema(basePath, factoryConfig.schemas);
@@ -70,17 +77,25 @@ public class Factory {
         Map<String, Map<String, Entity>> schemas = new HashMap<>();
 
         List<Generator> generators = factoryConfig.generators.stream().map(generatorConfig -> {
-            String path = basePath + "/" + generatorConfig.path;
+            String filePath = basePath + "/" + generatorConfig.path;
+            String classPath = "generators/" + generatorConfig.path;
             if (generatorConfig.path.startsWith("/")) {
-                path = generatorConfig.path;
+                filePath = generatorConfig.path;
             }
 
+            PebbleEngine pebbleEngineForPath = createPebbleEngineForPath(filePath, classPath, schemas);
 
-            PebbleEngine pebbleEngineForPath = createPebbleEngineForPath(path, schemas);
+            Path path = Path.of(filePath);
+            if (!Files.exists(path)) {
+                URL resource = Factory.class.getClassLoader().getResource(classPath);
+                if (resource == null) {
+                    throw new RuntimeException("Generator not found in `" + filePath + "` folder or in `" + classPath + "` class path");
+                }
+                path = Path.of(resource.getPath());
+            }
 
             Map<String, PebbleTemplate> mainTemplates;
-
-            try (Stream<Path> files = Files.list(Path.of(path))) {
+            try (Stream<Path> files = Files.list(path)) {
                 mainTemplates = files
                         .map(Path::toFile)
                         .filter(File::isFile)
@@ -130,12 +145,16 @@ public class Factory {
         return reversedFlattedList;
     }
 
-    private static PebbleEngine createPebbleEngineForPath(String path, Map<String, Map<String, Entity>> schemas) {
-        FileLoader loader1 = new FileLoader();
-        loader1.setPrefix(path);
-        loader1.setSuffix(".peb");
+    private static PebbleEngine createPebbleEngineForPath(String filePath, String classPath, Map<String, Map<String, Entity>> schemas) {
+        FileLoader fileLoader = new FileLoader();
+        fileLoader.setPrefix(filePath);
+        fileLoader.setSuffix(".peb");
 
-        DelegatingLoader delegatingLoader = new DelegatingLoader(List.of(loader1));
+        ClasspathLoader classpathLoader = new ClasspathLoader();
+        classpathLoader.setPrefix(classPath);
+        classpathLoader.setSuffix(".peb");
+
+        DelegatingLoader delegatingLoader = new DelegatingLoader(List.of(fileLoader, classpathLoader));
 
 
         PebbleEngine engine = new PebbleEngine.Builder()

@@ -21,17 +21,9 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 }
 
-shadowJar {
-    mergeServiceFiles()
-}
-
 test {
     useJUnitPlatform()
 }
 compileJava {
     options.compilerArgs += ['--enable-preview']
-}
-
-tasks.build {
-    dependsOn shadowJar
 }

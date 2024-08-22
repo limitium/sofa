@@ -36,8 +36,7 @@ Kafka db sink connect isn't able to write into multiple tables.
 |     | Messages | Key-value   | RDBMS            | In memory data grid |
 |-----|----------|-------------|------------------|---------------------|
 | 1:1 | Embedded | Embedded    | Prefixed columns | Prefixed columns    |
-| 1:N | Embedded | Extra store | Extra table      | Extra nodes         |        
-| N:M | Embedded | Extra store | Extra table      | Extra nodes         |   
+| 1:N | Embedded | Extra store | Extra table      | Extra nodes         |
+| N:M | Embedded | Extra store | Extra table      | Extra nodes         |
 
 ## Consequences
-

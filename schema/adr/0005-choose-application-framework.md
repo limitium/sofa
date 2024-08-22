@@ -21,7 +21,7 @@ Implement in java without frameworks
 
 ## Consequences
 
-### Pros 
+### Pros
 
 * Startup and generation time
 * Application size

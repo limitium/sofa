@@ -1,6 +1,6 @@
 plugins {
     id 'java'
-    id "com.diffplug.spotless" version "6.19.0"
+    id "com.diffplug.spotless" version "6.20.0"
 }
 
 spotless {
@@ -22,7 +22,7 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'maven-publish'
 
-    version '0.2-SNAPSHOT'
+    version '0.3-SNAPSHOT'
 
     group 'art.limitium.sofa'
 
@@ -52,5 +52,14 @@ subprojects {
         java {
             withSourcesJar()
         }
+    }
+}
+
+tasks{
+    build {
+        dependsOn 'spotlessApply'
+    }
+    test {
+        dependsOn 'spotlessCheck'
     }
 }

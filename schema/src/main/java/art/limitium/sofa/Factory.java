@@ -23,13 +23,14 @@ import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
 import java.io.*;
+import java.net.JarURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -54,7 +55,7 @@ public class Factory {
 
         logger.info("Loading configuration from {}", configPath);
         File configFile = new File(configPath);
-        String basePath = configFile.getParent();
+        String basePath = configFile.getAbsoluteFile().getParent();
         logger.info("Base path is set to {}", basePath);
 
         FactoryConfig factoryConfig;
@@ -83,30 +84,71 @@ public class Factory {
                 filePath = generatorConfig.path;
             }
 
+            //Configure for regular and class loader
             PebbleEngine pebbleEngineForPath = createPebbleEngineForPath(filePath, classPath, schemas);
 
+
+
+            List<String> mainTemplatesNames = new ArrayList<>();
+            //regular external filepath
             Path path = Path.of(filePath);
-            if (!Files.exists(path)) {
-                URL resource = Factory.class.getClassLoader().getResource(classPath);
-                if (resource == null) {
-                    throw new RuntimeException("Generator not found in `" + filePath + "` folder or in `" + classPath + "` class path");
+            if (Files.exists(path)) {
+                logger.info("Generator loaded from regular folder: {}", path.toAbsolutePath());
+                try (Stream<Path> files = Files.list(path)) {
+                    mainTemplatesNames = files
+                            .map(Path::toFile)
+                            .filter(File::isFile)
+                            .filter(f -> f.getName().endsWith(".peb"))
+                            .map(f -> f.getName().replace(".peb", ""))
+                            .toList();
+                } catch (IOException e) {
+                    throw new RuntimeException("Unable to load templates for `" + generatorConfig.path + "` generator", e);
                 }
-                path = Path.of(resource.getPath());
+
+            } else {
+                URL resource = Factory.class.getClassLoader().getResource(classPath);
+                if(resource==null){
+                    throw new RuntimeException("Unable to load templates for `" + generatorConfig.path + "` generator");
+                }
+
+                if (!resource.getProtocol().equals("jar")) {
+                    //resources from current filebased classpath
+                    logger.info("Generator loaded from resource folder: {}", path.toAbsolutePath());
+                    try (Stream<Path> files = Files.list(Path.of(resource.getPath()))) {
+                        mainTemplatesNames = files
+                                .map(Path::toFile)
+                                .filter(File::isFile)
+                                .filter(f -> f.getName().endsWith(".peb"))
+                                .map(f -> f.getName().replace(".peb", ""))
+                                .toList();
+                    } catch (IOException e) {
+                        throw new RuntimeException("Unable to load templates for `" + generatorConfig.path + "` generator", e);
+                    }
+                } else {
+                    //inner jar resources
+                    logger.info("Generator loaded from jar: {}", path.toAbsolutePath());
+                    try {
+                        JarURLConnection jarConnection = (JarURLConnection) resource.openConnection();
+                        JarFile jarFile = jarConnection.getJarFile();
+                        Enumeration<JarEntry> entries = jarFile.entries();
+                        while (entries.hasMoreElements()) {
+                            JarEntry entry = entries.nextElement();
+                            String entryName = entry.getName();
+                            if (entryName.startsWith(classPath) && entryName.endsWith(".peb")) {
+                                // Process each entry
+                                mainTemplatesNames.add(entryName);
+                                logger.info("JAR content {}", entry);
+                            }
+                        }
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
             }
 
-            Map<String, PebbleTemplate> mainTemplates;
-            try (Stream<Path> files = Files.list(path)) {
-                mainTemplates = files
-                        .map(Path::toFile)
-                        .filter(File::isFile)
-                        .filter(f -> f.getName().endsWith(".peb"))
-                        .map(f -> f.getName().replace(".peb", ""))
-                        .map(pebbleEngineForPath::getTemplate)
-                        .collect(Collectors.toMap(PebbleTemplate::getName, identity()));
-            } catch (IOException e) {
-                throw new RuntimeException("Unable to load templates for `" + generatorConfig.path + "` generator", e);
-            }
-
+            Map<String, PebbleTemplate> mainTemplates=mainTemplatesNames.stream()
+                    .map(pebbleEngineForPath::getTemplate)
+                    .collect(Collectors.toMap(PebbleTemplate::getName, identity()));
             logger.info("Create generator `{}`, with templates: \r\n{}", generatorConfig.path, String.join("\r\n", mainTemplates.keySet().stream().toList()));
 
             return new Generator(
@@ -150,6 +192,7 @@ public class Factory {
         fileLoader.setPrefix(filePath);
         fileLoader.setSuffix(".peb");
 
+        //Expects
         ClasspathLoader classpathLoader = new ClasspathLoader();
         classpathLoader.setPrefix(classPath);
         classpathLoader.setSuffix(".peb");

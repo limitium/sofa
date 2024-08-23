@@ -24,6 +24,11 @@ dependencies {
 shadowJar {
     archiveClassifier.set('')
     mergeServiceFiles()
+    manifest {
+        attributes(
+                'Main-Class': 'art.limitium.sofa.Factory'  // Replace with your actual main class
+        )
+    }
 }
 
 test {
@@ -36,12 +41,6 @@ compileJava {
 tasks{
     jar{
         dependsOn shadowJar
-        archiveClassifier.set('')
-        from {
-            tasks.shadowJar.get().outputs.files.singleFile
-        }
-    }
-    build {
-        dependsOn shadowJar
+        enabled = false
     }
 }

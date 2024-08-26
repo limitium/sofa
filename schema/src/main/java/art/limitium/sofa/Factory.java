@@ -135,9 +135,17 @@ public class Factory {
                             JarEntry entry = entries.nextElement();
                             String entryName = entry.getName();
                             if (entryName.startsWith(classPath) && entryName.endsWith(".peb")) {
+                                // Extracting filename and extension
+                                String fullName = entry.getName();  // Get the full entry name (path)
+                                String fileName = fullName.substring(fullName.lastIndexOf('/') + 1);  // Extract just the file name
+
+                                // Handle cases where there might not be an extension
+                                int lastDotIndex = fileName.lastIndexOf('.');
+                                String nameWithoutExtension = (lastDotIndex != -1) ? fileName.substring(0, lastDotIndex) : fileName;
+
                                 // Process each entry
-                                mainTemplatesNames.add(entryName);
-                                logger.info("JAR content {}", entry);
+                                mainTemplatesNames.add(nameWithoutExtension);
+
                             }
                         }
                     } catch (IOException e) {
@@ -258,3 +266,5 @@ public class Factory {
     }
 }
 //todo: Do not override if overridden entity structure exactly the same
+//todo: Extensions for filters, types from CP and injection via yaml
+//todo: Gradle plugin/script to run

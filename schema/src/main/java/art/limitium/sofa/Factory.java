@@ -276,3 +276,5 @@ public class Factory {
 //todo: Do not override if overridden entity structure exactly the same
 //todo: Extensions for filters, types from CP and injection via yaml
 //todo: Gradle plugin/script to run
+//todo: examples tests?
+//todo: docs

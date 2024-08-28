@@ -44,7 +44,7 @@ subprojects {
             }
         }
         publications {
-            porduction(MavenPublication) {
+            production(MavenPublication) {
                 artifactId "${rootProject.name}-${project.name}"
                 from components.java
             }

@@ -38,9 +38,18 @@ compileJava {
     options.compilerArgs += ['--enable-preview']
 }
 
-tasks{
-    jar{
+tasks {
+    jar {
         dependsOn shadowJar
         enabled = false
+    }
+}
+
+publishing {
+    publications {
+        production(MavenPublication) {
+            artifactId "${rootProject.name}-${project.name}"
+            artifact shadowJar.outputs.files.singleFile
+        }
     }
 }

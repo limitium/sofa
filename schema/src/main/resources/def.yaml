@@ -23,7 +23,7 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname }}.fbs"
       folder: "../../../../build/generated/sources/fbs"
-    postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/java {{ files | join(' ') }}"
+    postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/java/main {{ files | join(' ') }}"
   - path: "flatbuffers_entities"
     filters:
       white: []
@@ -35,21 +35,21 @@ generators:
       filename: "{{ fullname }}.fbs"
       folder: "../../../../build/generated/sources/fbs"
     overrides: "flatbuffers_messages"
-    postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/java {{ files | join(' ') }}"
+    postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/java/main {{ files | join(' ') }}"
   - path: "pojo_messages"
     templates:
       namespace: "{{ schema.namespace }}.pojo.messages"
       name: "{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java"
+      folder: "../../../../build/generated/sources/java/main"
   - path: "pojo_entities"
     templates:
       namespace: "{{ schema.namespace }}.pojo.entities"
       name: "{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java"
+      folder: "../../../../build/generated/sources/java/main"
     overrides: "pojo_messages"
   - path: "builder_messages"
     templates:
@@ -57,12 +57,12 @@ generators:
       name: "{{ schema.name }}Builder"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java"
+      folder: "../../../../build/generated/sources/java/main"
   - path: "builder_entities"
     templates:
       namespace: "{{ schema.namespace }}.builder.entities"
       name: "{{ schema.name }}Builder"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java"
+      folder: "../../../../build/generated/sources/java/main"
     overrides: "builder_messages"

@@ -27,8 +27,9 @@ import java.net.JarURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
-import java.util.function.Function;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -51,6 +52,7 @@ public class Factory {
         if (args.length < 1) {
             throw new RuntimeException("Path to generator definition file is missed");
         }
+        Instant startTime = Instant.now();
         String configPath = args[0];
 
         logger.info("Loading configuration from {}", configPath);
@@ -88,7 +90,6 @@ public class Factory {
             PebbleEngine pebbleEngineForPath = createPebbleEngineForPath(filePath, classPath, schemas);
 
 
-
             List<String> mainTemplatesNames = new ArrayList<>();
             //regular external filepath
             Path path = Path.of(filePath);
@@ -107,7 +108,7 @@ public class Factory {
 
             } else {
                 URL resource = Factory.class.getClassLoader().getResource(classPath);
-                if(resource==null){
+                if (resource == null) {
                     throw new RuntimeException("Unable to load templates for `" + generatorConfig.path + "` generator");
                 }
 
@@ -154,7 +155,7 @@ public class Factory {
                 }
             }
 
-            Map<String, PebbleTemplate> mainTemplates=mainTemplatesNames.stream()
+            Map<String, PebbleTemplate> mainTemplates = mainTemplatesNames.stream()
                     .map(pebbleEngineForPath::getTemplate)
                     .collect(Collectors.toMap(PebbleTemplate::getName, identity()));
             logger.info("Create generator `{}`, with templates: \r\n{}", generatorConfig.path, String.join("\r\n", mainTemplates.keySet().stream().toList()));
@@ -181,6 +182,9 @@ public class Factory {
             logger.info("Start generator `{}`", generator.getName());
             generator.generate(scopeOfWork);
         }
+
+        Duration duration = Duration.between(startTime, Instant.now());
+        logger.info("Generation successful in {}.{}s", duration.toSeconds(), duration.toMillisPart());
     }
 
 
@@ -235,7 +239,11 @@ public class Factory {
                 logger.info("Parsing schema from {}", filePath);
                 Schema schema = parser.parse(new File(filePath));
                 logger.debug("Schema parsed {}", schema);
-                schemaDefinition.addRecord(schema);
+                if (schema.isUnion()) {
+                    schema.getTypes().forEach(schemaDefinition::addRecord);
+                } else {
+                    schemaDefinition.addRecord(schema);
+                }
             } catch (SchemaParseException | IOException e) {
                 throw new RuntimeException("Unable to parse file `" + filePath + "`", e);
             }

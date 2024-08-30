@@ -22,7 +22,7 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'maven-publish'
 
-    version '0.8-SNAPSHOT'
+    version '0.1-SNAPSHOT'
 
     group 'art.limitium.sofa'
 

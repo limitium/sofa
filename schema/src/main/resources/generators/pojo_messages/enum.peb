@@ -1,8 +1,13 @@
 package {{ entity.namespace }};
 
 public enum {{ entity.name }}{
+{% if entity | isAliased %}
+    String alias;
+    {{ entity.name }}(String alias){
+        this.alias = alias;
+    }
+{% endif %}
 {% for symbol in symbols %}
-    {{ symbol }}{% if loop.last %};{% else %},{% endif %}
-
+    {{ symbol }}{% if entity | isAliased %}("{{ entity | alias(symbol) }}"){% endif %}{% if loop.last %};{% else %},{% endif %}
 {% endfor %}
 }

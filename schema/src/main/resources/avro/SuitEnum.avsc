@@ -3,5 +3,6 @@
     "type": "enum",
     "name": "Suit",
     "symbols": ["UNKNOWN","SPADES", "HEARTS", "DIAMONDS", "CLUBS"],
+    "symbol_aliases": ["U","S", "H", "D", "C"],
     "default": "UNKNOWN"
 }

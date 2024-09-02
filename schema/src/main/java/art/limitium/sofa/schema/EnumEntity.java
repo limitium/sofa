@@ -17,4 +17,17 @@ public class EnumEntity extends Entity {
     public List<String> getSymbols() {
         return symbols;
     }
+
+    public List<String> getAliases() {
+        return (List<String>) getSchema().getObjectProp("symbol_aliases");
+    }
+
+    public String getAlias(String symbol) {
+        for (int i = 0; i < getSymbols().size(); i++) {
+            if (symbol.equals(getSymbols().get(i))) {
+                return getAliases().get(i);
+            }
+        }
+        throw new RuntimeException("Alias for " + symbol + " not found in enum " + getFullname());
+    }
 }

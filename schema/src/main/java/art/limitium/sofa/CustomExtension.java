@@ -43,8 +43,6 @@ public class CustomExtension extends AbstractExtension {
         filters.put("from", new FromFilter(schemas));
         filters.put("noRecordLists", new NoRecordListFilter());
         filters.put("recordLists", new RecordListFilter());
-        filters.put("alias", new AliasFilter());
-        filters.put("isAliased", new isAliasedFilter());
         typeConverters.forEach(c -> filters.put(c.getName(), new TypeFilter(c)));
         return filters;
     }
@@ -399,75 +397,6 @@ public class CustomExtension extends AbstractExtension {
         public Object apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) throws PebbleException {
             if (input instanceof List<?> entities) {
                 return entities.stream().filter(this::isRecordList).collect(Collectors.toList());
-            }
-            return input;
-        }
-
-        protected boolean isRecordList(Object o) {
-            if (o instanceof RecordEntity.Field field) {
-                if (field.type() instanceof Type.ArrayType arrayType) {
-                    return arrayType.getElementType() instanceof Type.RecordType;
-                }
-                return false;
-            }
-            return true;
-        }
-    }
-
-    public static class AliasFilter implements Filter {
-
-        @Override
-        public List<String> getArgumentNames() {
-            return null; // This filter does not require any arguments
-        }
-
-
-        @Override
-        public Object apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) throws PebbleException {
-            if (input instanceof EnumEntity enumEntity) {
-                if (args.containsKey("0")) {
-                    for (int i = 0; i < enumEntity.getSymbols().size(); i++) {
-                        if (enumEntity.getSymbols().get(i).equals(args.get("0"))) {
-                            Object symbolAliases= enumEntity.getSchema().getObjectProp("symbol_aliases");
-                            if (symbolAliases instanceof List<?> aliases) {
-                                return aliases.get(i);
-                            }
-                        }
-                    }
-                }
-            }
-            return input;
-        }
-
-        protected boolean isRecordList(Object o) {
-            if (o instanceof RecordEntity.Field field) {
-                if (field.type() instanceof Type.ArrayType arrayType) {
-                    return arrayType.getElementType() instanceof Type.RecordType;
-                }
-                return false;
-            }
-            return true;
-        }
-    }
-
-    public static class isAliasedFilter implements Filter {
-
-        @Override
-        public List<String> getArgumentNames() {
-            return null; // This filter does not require any arguments
-        }
-
-
-        @Override
-        public Object apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) throws PebbleException {
-            if (input instanceof EnumEntity enumEntity) {
-                Object symbolAliases= enumEntity.getSchema().getObjectProp("symbol_aliases");
-                if (symbolAliases== null) {
-                    return false;
-                }
-                if (symbolAliases instanceof List<?> aliases) {
-                    return !aliases.isEmpty();
-                }
             }
             return input;
         }

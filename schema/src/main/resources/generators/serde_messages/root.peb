@@ -1,0 +1,37 @@
+{% set pojo = entity | from("pojo_messages") %}
+{% set fb = entity | from("flatbuffers_messages") %}
+{% set b = entity | from("builder_messages") %}
+package {{ entity.namespace }};
+
+import org.apache.kafka.common.serialization.Deserializer;
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.common.serialization.Serializer;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
+
+public class {{ entity.name }} implements Serde<{{ pojo.fullname }}> {
+
+    @Override
+    public Serializer<{{ pojo.fullname }}> serializer() {
+        return (topic, data) -> {
+
+            return {{ b.fullname }}.buildFlatbufferFrom(data).getByteBuffer().array();
+        };
+    }
+
+    @Override
+    public Deserializer<{{ pojo.fullname }}> deserializer() {
+        return (topic, data) -> {
+            try {
+                if(data == null) {
+                    return null;
+                }
+                return {{ b.fullname }}.buildPojoFrom({{ fb.fullname }}.getRootAs{{ fb.name }}(ByteBuffer.wrap(data)));
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException(e);
+            }
+        };
+    }
+}

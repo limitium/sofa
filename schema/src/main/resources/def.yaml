@@ -18,7 +18,7 @@ generators:
       white: []
       black: [ "com.example.avro.NU" ]
     templates:
-      namespace: "{{ schema.namespace }}.fbm"
+      namespace: "{{ schema.namespace }}.messages.fb"
       name: "Fb{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname }}.fbs"
@@ -29,7 +29,7 @@ generators:
       white: []
       black: [ "com.example.avro.NU" ]
     templates:
-      namespace: "{{ schema.namespace }}.fbe"
+      namespace: "{{ schema.namespace }}.entities.fb"
       name: "Fb{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname }}.fbs"
@@ -38,14 +38,14 @@ generators:
     postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/java/main {{ files | join(' ') }}"
   - path: "pojo_messages"
     templates:
-      namespace: "{{ schema.namespace }}.pojo.messages"
+      namespace: "{{ schema.namespace }}.messages.pojo"
       name: "{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "../../../../build/generated/sources/java/main"
   - path: "pojo_entities"
     templates:
-      namespace: "{{ schema.namespace }}.pojo.entities"
+      namespace: "{{ schema.namespace }}.entities.pojo"
       name: "{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
@@ -53,16 +53,29 @@ generators:
     overrides: "pojo_messages"
   - path: "builder_messages"
     templates:
-      namespace: "{{ schema.namespace }}.builder.messages"
+      namespace: "{{ schema.namespace }}.messages.builder"
       name: "{{ schema.name }}Builder"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "../../../../build/generated/sources/java/main"
   - path: "builder_entities"
     templates:
-      namespace: "{{ schema.namespace }}.builder.entities"
+      namespace: "{{ schema.namespace }}.entities.builder"
       name: "{{ schema.name }}Builder"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "../../../../build/generated/sources/java/main"
-    overrides: "builder_messages"
+  - path: "serde_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.serde"
+      name: "{{ schema.name }}Serde"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "../../../../build/generated/sources/java/main"
+  - path: "serde_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.serde"
+      name: "{{ schema.name }}Serde"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "../../../../build/generated/sources/java/main"

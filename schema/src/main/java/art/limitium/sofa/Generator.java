@@ -23,10 +23,11 @@ public class Generator {
     private final FiltersConfig filters;
     public PebbleTemplate postCall;
     private final Map<String, Map<String, Entity>> schemas;
+    private final Map<String, String> valuesContext;
     private final String basePath;
     private String folder;
 
-    public Generator(String name, Map<String, PebbleTemplate> mainTemplates, Templates templates, String overrides, FiltersConfig filters, PebbleTemplate postCall, Map<String, Map<String, Entity>> schemas, String basePath) {
+    public Generator(String name, Map<String, PebbleTemplate> mainTemplates, Templates templates, String overrides, FiltersConfig filters, PebbleTemplate postCall, Map<String, Map<String, Entity>> schemas, Map<String, String> valuesContext) {
         this.name = name;
         this.mainTemplates = mainTemplates;
         this.templates = templates;
@@ -34,7 +35,8 @@ public class Generator {
         this.filters = filters;
         this.postCall = postCall;
         this.schemas = schemas;
-        this.basePath = basePath;
+        this.valuesContext = valuesContext;
+        this.basePath = valuesContext.get("basePath");
     }
 
 
@@ -215,7 +217,7 @@ public class Generator {
                 throw new RuntimeException("Unable to create folder " + folder, e);
             }
         }
-        evaluateTemplateToFile(template, context, fileName);
+        evaluateTemplateToFile(template, extendValuesContext(context), fileName);
         return fileName;
     }
 
@@ -223,7 +225,7 @@ public class Generator {
     private String generateName(Schema schema) {
         String name = schema.getName();
         if (templates.name != null) {
-            name = Factory.evaluateTemplateToString(templates.name, Collections.singletonMap("schema", schema));
+            name = Factory.evaluateTemplateToString(templates.name, extendValuesContext(Collections.singletonMap("schema", schema)));
         }
         return name;
     }
@@ -231,7 +233,7 @@ public class Generator {
     private String generateNamespace(Schema schema) {
         String namespace = schema.getNamespace();
         if (templates.namespace != null) {
-            namespace = Factory.evaluateTemplateToString(templates.namespace, Collections.singletonMap("schema", schema));
+            namespace = Factory.evaluateTemplateToString(templates.namespace, extendValuesContext(Collections.singletonMap("schema", schema)));
         }
         return namespace;
     }
@@ -239,7 +241,7 @@ public class Generator {
     private String generateFullname(String namespace, String name, Schema schema) {
         String fullname = namespace + "." + name;
         if (templates.namespace != null) {
-            fullname = Factory.evaluateTemplateToString(templates.fullname, Map.of("namespace", namespace, "name", name, "schema", schema));
+            fullname = Factory.evaluateTemplateToString(templates.fullname, extendValuesContext(Map.of("namespace", namespace, "name", name, "schema", schema)));
         }
         return fullname;
     }
@@ -247,7 +249,7 @@ public class Generator {
     private String generateFilename(Entity entity) {
         String filename = entity.getName();
         if (templates.filename != null) {
-            filename = Factory.evaluateTemplateToString(templates.filename, Map.of("namespace", entity.getNamespace(), "name", entity.getName(), "fullname", entity.getFullname(), "schema", entity.getSchema(), "entity", entity));
+            filename = Factory.evaluateTemplateToString(templates.filename, extendValuesContext(Map.of("namespace", entity.getNamespace(), "name", entity.getName(), "fullname", entity.getFullname(), "schema", entity.getSchema(), "entity", entity)));
         }
         return filename;
     }
@@ -255,20 +257,22 @@ public class Generator {
     private String generateFolder(Entity entity) {
         String folder = entity.getNamespace();
         if (templates.folder != null) {
-            folder = Factory.evaluateTemplateToString(templates.folder, Collections.singletonMap("entity", entity));
+            folder = Factory.evaluateTemplateToString(templates.folder, extendValuesContext(Collections.singletonMap("entity", entity)));
         }
         return folder;
     }
 
     private String generatePostCall(List<String> files) {
         if (this.postCall != null) {
-            return Factory.evaluateTemplateToString(this.postCall,
-                    Map.of(
-                            "files", files,
-                            "basePath", basePath
-                    ));
+            return Factory.evaluateTemplateToString(this.postCall, extendValuesContext(Map.of("files", files)));
         }
         return null;
+    }
+
+    private HashMap<String, Object> extendValuesContext(Map<String, Object> extension) {
+        HashMap<String, Object> extendedContext = new HashMap<>(valuesContext);
+        extendedContext.putAll(extension);
+        return extendedContext;
     }
 
     public String getName() {

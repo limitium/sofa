@@ -155,6 +155,16 @@ public class Factory {
                 }
             }
 
+            logger.info("Evaluate values");
+            Map<String, String> valuesContext = new HashMap<>();
+            valuesContext.put("basePath", basePath);
+
+            factoryConfig.values.replaceAll((k, v) -> {
+                String newValue = evaluateTemplateToString(compileInlineTemplate(v), valuesContext);
+                valuesContext.put(k, newValue);
+                return newValue;
+            });
+
             Map<String, PebbleTemplate> mainTemplates = mainTemplatesNames.stream()
                     .map(pebbleEngineForPath::getTemplate)
                     .collect(Collectors.toMap(PebbleTemplate::getName, identity()));
@@ -174,7 +184,7 @@ public class Factory {
                     generatorConfig.filters,
                     compileInlineTemplate(generatorConfig.postCall),
                     schemas,
-                    basePath);
+                    valuesContext);
         }).toList();
 
 
@@ -263,10 +273,11 @@ public class Factory {
         return inlineEngine.getTemplate(template);
     }
 
-    static String evaluateTemplateToString(PebbleTemplate template, Map<String, Object> context) {
+    @SuppressWarnings("unchecked")
+    static String evaluateTemplateToString(PebbleTemplate template, Map<String, ?> context) {
         StringWriter stringWriter = new StringWriter();
         try {
-            template.evaluate(stringWriter, context);
+            template.evaluate(stringWriter, (Map<String, Object>) context);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

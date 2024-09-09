@@ -12,6 +12,9 @@ schemas:
   - "avro/Root3.avsc"
   - "avro/Root4.avsc"
   - "avro/Root5.avsc"
+values:
+  outputPath: "{{basePath}}/../../../../build/generated/sources"
+  flatcCMD: "{{basePath}}/flatc -j --force-defaults --gen-mutable -o"
 generators:
   - path: "flatbuffers_messages"
     filters:
@@ -22,8 +25,8 @@ generators:
       name: "Fb{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname }}.fbs"
-      folder: "../../../../build/generated/sources/fbs"
-    postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/java/main {{ files | join(' ') }}"
+      folder: "{{outputPath}}/fbs"
+    postCall: "{{ flatcCMD }} {{outputPath}}/java/main {{ files | join(' ') }}"
   - path: "flatbuffers_entities"
     filters:
       white: []
@@ -33,23 +36,23 @@ generators:
       name: "Fb{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname }}.fbs"
-      folder: "../../../../build/generated/sources/fbs"
+      folder: "{{outputPath}}/fbs"
     overrides: "flatbuffers_messages"
-    postCall: "flatc -j --force-defaults --gen-mutable -o {{basePath}}/../../../../build/generated/sources/java/main {{ files | join(' ') }}"
+    postCall: "{{ flatcCMD }} {{outputPath}}/java/main {{ files | join(' ') }}"
   - path: "pojo_messages"
     templates:
       namespace: "{{ schema.namespace }}.messages.pojo"
       name: "{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java/main"
+      folder: "{{outputPath}}/java/main"
   - path: "pojo_entities"
     templates:
       namespace: "{{ schema.namespace }}.entities.pojo"
       name: "{{ schema.name }}"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java/main"
+      folder: "{{outputPath}}/java/main"
     overrides: "pojo_messages"
   - path: "builder_messages"
     templates:
@@ -57,25 +60,25 @@ generators:
       name: "{{ schema.name }}Builder"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java/main"
+      folder: "{{outputPath}}/java/main"
   - path: "builder_entities"
     templates:
       namespace: "{{ schema.namespace }}.entities.builder"
       name: "{{ schema.name }}Builder"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java/main"
+      folder: "{{outputPath}}/java/main"
   - path: "serde_messages"
     templates:
       namespace: "{{ schema.namespace }}.messages.serde"
       name: "{{ schema.name }}Serde"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java/main"
+      folder: "{{outputPath}}/java/main"
   - path: "serde_entities"
     templates:
       namespace: "{{ schema.namespace }}.entities.serde"
       name: "{{ schema.name }}Serde"
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
-      folder: "../../../../build/generated/sources/java/main"
+      folder: "{{outputPath}}/java/main"

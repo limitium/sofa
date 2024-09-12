@@ -53,8 +53,17 @@ public class Factory {
             throw new RuntimeException("Path to generator definition file is missed");
         }
         Instant startTime = Instant.now();
-        String configPath = args[0];
+        String[] configPaths = args[0].split(",");
 
+        logger.info("Provided configurations {}:\r\n{}",configPaths.length, String.join("\r\n", configPaths));
+
+        Arrays.stream(configPaths).sequential().forEach(Factory::generateForConfiguration);
+
+        Duration duration = Duration.between(startTime, Instant.now());
+        logger.info("Generation successful in {}.{}s", duration.toSeconds(), duration.toMillisPart());
+    }
+
+    private static void generateForConfiguration(String configPath) {
         logger.info("Loading configuration from {}", configPath);
         File configFile = new File(configPath);
         String basePath = configFile.getAbsoluteFile().getParent();
@@ -192,9 +201,6 @@ public class Factory {
             logger.info("Start generator `{}`", generator.getName());
             generator.generate(scopeOfWork);
         }
-
-        Duration duration = Duration.between(startTime, Instant.now());
-        logger.info("Generation successful in {}.{}s", duration.toSeconds(), duration.toMillisPart());
     }
 
 

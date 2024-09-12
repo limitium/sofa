@@ -1,13 +1,14 @@
 package {{ entity.namespace }};
 
 public enum {{ entity.name }}{
-{% if entity.aliases is not empty %}
-    String alias;
-    {{ entity.name }}(String alias){
-        this.alias = alias;
-    }
-{% endif %}
 {% for symbol in symbols %}
     {{ symbol }}{% if entity.aliases is not empty %}("{{ entity.alias(symbol) }}"){% endif %}{% if loop.last %};{% else %},{% endif %}
 {% endfor %}
+
+{% if entity.aliases is not empty %}
+String alias;
+{{ entity.name }}(String alias){
+    this.alias = alias;
+}
+{% endif %}
 }

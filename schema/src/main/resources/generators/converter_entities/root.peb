@@ -1,0 +1,54 @@
+{% set pojo = entity | from("pojo_entities") %}
+{% set serde = entity | from("serde_entities") %}
+package {{ entity.namespace }};
+
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+
+import {{ pojo.fullname }};
+import {{ serde.fullname }};
+
+public class {{ entity.name }} implements WrappedConverter<{{ pojo.name }}> {
+
+    @Override
+    public SchemaBuilder fillSchema(SchemaBuilder builder){
+        return builder
+            {% for field in entity | flattenFields('_') | noRecordLists -%}
+                .field("{{ field.name | toSnakeCase | upper }}", Schema.{{ field.type | javaType }}_SCHEMA)
+            {% endfor %}
+        ;
+    }
+
+    @Override
+    public void fillStruct(Struct struct, {{ pojo.name }} obj){
+        struct
+            {% for field in entity | flattenFields('.') | noRecordLists -%}
+                .put("{{ field.name| replace({'.':'_'}) | toSnakeCase | upper }}", obj.{{ field.name }})
+            {% endfor %}
+        ;
+    }
+
+    @Override
+    public {{ pojo.name }} createObject(Schema schema, Struct struct){
+        {{ pojo.name }} root = new {{ pojo.name }}();
+
+        {% for field in entity | flattenRecords('.') %}
+            {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
+            {% if not pojoRecord.dependent %}
+                {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}
+            {% endif %}
+                root.{{ field.name }} = new {{ pojoRecord.fullname }}() ;
+        {% endfor %}
+
+        //todo fillup root
+
+        return root;
+    }
+
+    @Override
+    public Serde<{{ pojo.name }}> getSerde(){
+        return new {{ serde.name }}();
+    }
+}

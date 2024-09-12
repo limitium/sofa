@@ -56,7 +56,8 @@ public class {{ entity.name }}{
                 flatBufferBuilder.createString(root.{{ field.name }})
             {%- endif -%}
             {%- if field.type.name == 'enum' -%}
-                (byte)root.{{ field.name }}.ordinal()
+                {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
+                findEnumIndex({{ fbmnum.fullname }}.names, root.{{ field.name }}.name())
             {%- endif -%}
             {%- if field.type.name == 'array' -%}
                 {{ field.name }}
@@ -90,9 +91,9 @@ public class {{ entity.name }}{
                         root.{{ field.name }} = fbRoot.{{ fbFieldName }}();
                 {%- endif -%}
                 {%- if field.type.name == 'enum' -%}
-                    {%- set fbmnum = field.type.enum | from("flatbuffers_entities") -%}
+                    {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
                     {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
-                        root.{{ field.name }} = {{ pojoEnum.fullname }}.valueOf({{  fbmnum.fullname }}.name(fbRoot.{{ fbFieldName }}()));
+                        root.{{ field.name }} = fbRoot.{{ fbFieldName }}() == 0 ? null : {{ pojoEnum.fullname }}.valueOf({{  fbmnum.fullname }}.name(fbRoot.{{ fbFieldName }}()));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {%- if field.type.elementType.name == 'string' -%}
@@ -113,6 +114,15 @@ public class {{ entity.name }}{
 
         {% endfor -%}
         return root;
+    }
+
+    private static byte findEnumIndex(String[] enumNames, String name) {
+        for (byte i = 0; i < enumNames.length; i++) {
+            if (enumNames[i] != null && enumNames[i].equals(name)) {
+                return i;
+            }
+        }
+        return 0;
     }
 }
 

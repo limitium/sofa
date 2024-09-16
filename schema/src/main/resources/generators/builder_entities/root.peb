@@ -23,9 +23,11 @@ public class {{ entity.name }}{
                     int {{ field.name }} = {{ fbe.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
                 {%- endif -%}
                 {%- if field.type.elementType.name == 'enum' -%}
+                    {%- set fbmnum = field.type.elementType.enum | from("flatbuffers_messages") -%}
+
                     byte[] {{ field.name }}_offsets = new byte[root.{{ field.name | replace({'_':'.'}) }}.size()];
                     for (int i = 0; i < root.listEnums.size(); i++) {
-                        listEnums_offsets[i]=(byte)root.listEnums.get(i).ordinal();
+                        {{ field.name }}_offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, root.{{ field.name }}.get(i).name());
                     }
 
                     int {{ field.name }} = {{ fbe.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
@@ -33,31 +35,33 @@ public class {{ entity.name }}{
             {%- endif -%}
         {% endfor %}
 
+        {{ fbe.name }}.start{{ fbe.name }}(flatBufferBuilder);
 
-        flatBufferBuilder.finish({{ fbe.name }}.create{{ fbe.name }}(
-            flatBufferBuilder,
-            {% for field in entity | flattenFields('.') | noRecordLists -%}
-                {%- if field.type | fbIsPrimitive -%}
-                    root.{{ field.name }}
-                {%- else -%}
-                    {%- if field.type.name == 'string' -%}
-                        flatBufferBuilder.createString(root.{{ field.name }})
-                    {%- endif -%}
-                    {%- if field.type.name == 'enum' -%}
-                        {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
-                        findEnumIndex({{ fbmnum.fullname }}.names, root.{{ field.name }}.name())
-                    {%- endif -%}
-                    {%- if field.type.name == 'array' -%}
-                        {{ field.name }}
-                    {%- endif -%}
-                    {%- if field.type.name == 'bytes' -%}
-                        flatBufferBuilder.createByteVector(root.{{ field.name }})
-                    {%- endif -%}
+            {% for field in entity | flattenFields('.') -%}
+            {%- set fbFieldName = field.name | replace({'.':'_'}) | toCamelCase -%}
+
+            {%- if field.type | fbIsPrimitive -%}
+                {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, root.{{ field.name }});
+            {%- else -%}
+                {%- if field.type.name == 'string' -%}
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, root.{{ field.name }} != null ? flatBufferBuilder.createString(root.{{ field.name }}) : null);
                 {%- endif -%}
-                {%- if not loop.last %},{% endif %}
+                {%- if field.type.name == 'enum' -%}
+                    {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, root.{{ field.name }}.name()));
+                {%- endif -%}
+                {%- if field.type.name == 'array' -%}
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ field.name }});
+                {%- endif -%}
+                {%- if field.type.name == 'bytes' -%}
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, root.{{ field.name }} != null ? flatBufferBuilder.createByteVector(root.{{ field.name }}) : null);
+                {%- endif -%}
+            {%- endif -%}
 
-            {% endfor -%}
-        ));
+        {% endfor -%}
+
+
+        flatBufferBuilder.finish({{ fbe.name }}.end{{ fbe.name }}(flatBufferBuilder));
 
         return {{ fbe.name }}.getRootAs{{ fbe.name }}(ByteBuffer.wrap(flatBufferBuilder.sizedByteArray()));
     }
@@ -96,7 +100,7 @@ public class {{ entity.name }}{
                     {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    root.{{ field.name }} = fbRoot.{{ fbFieldName }}AsByteBuffer().array();
+                    root.{{ field.name }} = fbRoot.{{ fbFieldName }}AsByteBuffer() != null ? fbRoot.{{ fbFieldName }}AsByteBuffer().array() : null;
                 {%- endif -%}
             {% endif %}
 

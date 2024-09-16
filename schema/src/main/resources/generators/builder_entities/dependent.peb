@@ -26,35 +26,38 @@ public class {{ entity.name }}{
         {% endfor %}
 
 
-        flatBufferBuilder.finish({{ fbe.name }}.create{{ fbe.name }}(
-            flatBufferBuilder,
-        {% for field in entity | flattenFields('.') | noRecordLists -%}
+
+        {{ fbe.name }}.start{{ fbe.name }}(flatBufferBuilder);
+
+        {% for field in entity | flattenFields('.') -%}
+            {%- set fbFieldName = field.name | replace({'.':'_'}) | toCamelCase -%}
+
             {%- if field.type | fbIsPrimitive -%}
-                dependent.{{ field.name }}
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ field.name }});
             {%- else -%}
                 {%- if field.type.name == 'string' -%}
-                    flatBufferBuilder.createString(dependent.{{ field.name }})
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ field.name }} != null ? flatBufferBuilder.createString(dependent.{{ field.name }}) : null);
                 {%- endif -%}
                 {%- if field.type.name == 'enum' -%}
                     {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
-                    findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ field.name }}.name())
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ field.name }}.name()));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
-                    {{ field.name }}
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ field.name }});
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    flatBufferBuilder.createByteVector(dependent.{{ field.name }})
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ field.name }} != null ? flatBufferBuilder.createByteVector(dependent.{{ field.name }}) : null);
                 {%- endif -%}
             {%- endif -%}
-            ,
-        {% endfor %}
+
+        {% endfor -%}
 
         {% set owners = entity | flattenOwners %}
         {% if owners.size > 0 %}
             //Links do dependents {{ owners.size }} total
         {% if owners.size == 1 %}
             {% set owner = owners[0] | from("pojo_entities") %}
-                dependent.{{ owner.name | toCamelCase }}Id
+            {{ fbe.name }}.add{{ owner.name | toCamelCase | capitalize }}Id(dependent.{{ owner.name | toCamelCase }}Id);
         {% endif %}
             {% if owners.size > 1 %}
                 //Todo: check entities
@@ -62,8 +65,8 @@ public class {{ entity.name }}{
                     //{{ owner.name }}
 
                 {% endfor %}
-                flatBufferBuilder.createString(dependent.ownerType),
-                dependent.ownerId
+                {{ fbe.name }}.addOwnerType(flatBufferBuilder.createString(dependent.ownerType));
+                {{ fbe.name }}.addOwnerId(dependent.ownerId);
             {% endif %}
         {% endif %}
         ));
@@ -101,7 +104,7 @@ public class {{ entity.name }}{
                     {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    dependent.{{ field.name }} = fbDependent.{{ fbFieldName }}AsByteBuffer().array();
+                    dependent.{{ field.name }} = fbDependent.{{ fbFieldName }}AsByteBuffer() != null ? fbDependent.{{ fbFieldName }}AsByteBuffer().array() : null;
                 {%- endif -%}
             {% endif %}
 

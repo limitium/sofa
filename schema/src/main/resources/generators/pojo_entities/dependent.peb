@@ -17,7 +17,7 @@ public class {{ entity.name }}{
         public long {{ owners[0].name | toCamelCase }}Id;
     {% endif %}
     {% if owners.size > 1 %}
-        public String ownerType;
+        public String ownerEntity;
         public long ownerId;
     {% endif %}
 {% endif %}

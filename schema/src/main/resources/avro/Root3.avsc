@@ -12,7 +12,7 @@
       "type": "int"
     },
     {
-      "name": "longField",
+      "name": "long_field",
       "type": "long"
     },
     {
@@ -77,7 +77,7 @@
         "namespace": "com.example.avro",
         "fields": [
           {
-            "name": "stringField",
+            "name": "string_field",
             "type": "string"
           },
           {

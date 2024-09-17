@@ -18,6 +18,7 @@ table {{ entity.name }}{
         {% endif %}
         {% if owners.size > 1 %}
             //{% for owner in owners %}{{ owner.name }},{% endfor %}
+
             owner_entity: string;
             owner_id: long;
         {% endif %}

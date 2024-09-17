@@ -10,65 +10,75 @@ import {{ fbm.fullname }};
 public class {{ entity.name }}{
 
     public static int buildFlatbufferFrom(FlatBufferBuilder flatBufferBuilder, {{ pojo.name }} dependent) {
-        {% for field in entity | flattenFields -%}
+        {% for field in entity | flattenFields('.') -%}
+            {%- set fieldName = field.name | toCamelCase -%}
+            {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
             {%- if field.type.name == 'array' -%}
                 {%- if field.type.elementType.name == 'string' -%}
 
-                    int[] {{ field.name }}_offsets = dependent.{{ field.name | replace({'_':'.'}) }}.stream()
+                    int[] {{ fbFieldName }}Offsets = dependent.{{ fieldName }}.stream()
                         .map(flatBufferBuilder::createString)
                         .mapToInt(v -> v)
                         .toArray();
 
-                    int {{ field.name }} = {{ fbm.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
+                    int {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
                 {%- if field.type.elementType.name == 'enum' -%}
                     {%- set fbmnum = field.type.elementType.enum | from("flatbuffers_messages") -%}
 
 
-                    byte[] {{ field.name }}_offsets = new byte[dependent.{{ field.name | replace({'_':'.'}) }}.size()];
+                    byte[] {{ fbFieldName }}Offsets = new byte[dependent.{{ fieldName }}.size()];
                     for (int i = 0; i < dependent.{{ field.name }}.size(); i++) {
-                        {{ field.name }}_offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ field.name }}.get(i).name());
+                        {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}.get(i).name());
                     }
 
-                    int {{ field.name }} = {{ fbm.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
+                    int {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
                 {%- if field.type.elementType.name == 'record' -%}
 
                     
-                    int[] {{ field.name }}_offsets = new int[dependent.{{ field.name | replace({'_':'.'}) }}.size()];
+                    int[] {{ fbFieldName }}Offsets = new int[dependent.{{ fieldName }}.size()];
                     for (int i = 0; i < dependent.{{ field.name }}.size(); i++) {
-                        {{ field.name }}_offsets[i]={{ field.type.elementType.record.fullname }}.buildFlatbufferFrom(flatBufferBuilder, dependent.{{ field.name }}.get(i));
+                        {{ fbFieldName }}Offsets[i]={{ field.type.elementType.record.fullname }}.buildFlatbufferFrom(flatBufferBuilder, dependent.{{ fieldName }}.get(i));
                     }
 
-                    int {{ field.name }} = {{ fbm.name }}.create{{ field.name | capitalize }}Vector(flatBufferBuilder, {{ field.name }}_offsets);
+                    int {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
-            {%- endif -%}
+            {%- endif %}
+            {%- if field.type.name == 'string' -%}
+                int {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
+            {%- endif %}
+
         {% endfor %}
 
 
         {{ fbm.name }}.start{{ fbm.name }}(flatBufferBuilder);
 
         {% for field in entity | flattenFields('.') -%}
-            {%- set fbFieldName = field.name | replace({'.':'_'}) | toCamelCase -%}
+            {%- set fieldName = field.name | toCamelCase -%}
+            {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
 
             {%- if field.type | fbIsPrimitive -%}
-               {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ field.name }});
-            {%- else -%}
-                {%- if field.type.name == 'string' -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ field.name }} != null ? flatBufferBuilder.createString(dependent.{{ field.name }}) : null);
-                {%- endif -%}
+               {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ fieldName }});
+            {% else %}
+                {% if field.type.name == 'string' %}
+                    if({{ fbFieldName }} != 0){
+                        {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    }
+                {% endif %}
                 {%- if field.type.name == 'enum' -%}
                     {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ field.name }}.name()));
+                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}.name()));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ field.name }});
+                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ field.name }} != null ? flatBufferBuilder.createByteVector(dependent.{{ field.name }}) : null);
+                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(dependent.{{ fieldName }}) : null);
                 {%- endif -%}
-            {%- endif -%}
+            {%- endif %}
 
+            return {{ fbm.name }}.end{{ fbm.name }}(flatBufferBuilder);
         {% endfor -%}
     }
 
@@ -81,32 +91,34 @@ public class {{ entity.name }}{
         {% endfor %}
 
         {% for field in entity | flattenFields('.') -%}
-            {%- set fbFieldName = field.name | replace({'.':'_'}) | toCamelCase -%}
+            {%- set fieldName = field.name | toCamelCase -%}
+            {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
+
             {%- if field.type | fbIsPrimitive -%}
-                        dependent.{{ field.name  }} = fbDependent.{{ fbFieldName }}();
-                    {%- else -%}
+                dependent.{{ field.name  }} = fbDependent.{{ fbFieldName }}();
+            {%- else -%}
                 {%- if field.type.name == 'string' -%}
-                            dependent.{{ field.name }} = fbDependent.{{ fbFieldName }}();
-                    {%- endif -%}
+                    dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}();
+                {%- endif -%}
                 {%- if field.type.name == 'enum' -%}
                     {%- set fbmnum = field.type.enum | from("flatbuffers_entities") -%}
                     {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
-                            dependent.{{ field.name }} = fbDependent.{{ fbFieldName }}() == 0 ? null : {{ pojoEnum.fullname }}.valueOf({{  fbmnum.fullname }}.name(fbDependent.{{ fbFieldName }}()));
+                        dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}() == 0 ? null : {{ pojoEnum.fullname }}.valueOf({{  fbmnum.fullname }}.name(fbDependent.{{ fbFieldName }}()));
                     {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {%- if field.type.elementType.name == 'string' -%}
-                            dependent.{{ field.name }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->fbDependent.{{ fbFieldName }}Vector().get(i)).toList();
-                        {%- endif -%}
+                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->fbDependent.{{ fbFieldName }}Vector().get(i)).toList();
+                    {%- endif -%}
                     {%- if field.type.elementType.name == 'enum' -%}
                         {% set pojoEnum = field.type.elementType.enum | from("pojo_messages") %}
-                            dependent.{{ field.name }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->{{ pojoEnum.fullname }}.values()[fbDependent.{{ fbFieldName }}Vector().get(i)]).toList();
-                        {%- endif -%}
+                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->{{ pojoEnum.fullname }}.values()[fbDependent.{{ fbFieldName }}Vector().get(i)]).toList();
+                    {%- endif -%}
                     {%- if field.type.elementType.name == 'record' -%}
-                            dependent.{{ field.name }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->{{ field.type.elementType.record.fullname }}.buildPojoFrom(fbDependent.{{ fbFieldName }}Vector().get(i))).toList();
-                        {%- endif -%}
+                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->{{ field.type.elementType.record.fullname }}.buildPojoFrom(fbDependent.{{ fbFieldName }}Vector().get(i))).toList();
+                    {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                        dependent.{{ field.name }} = fbDependent.{{ fbFieldName }}AsByteBuffer() != null ? fbDependent.{{ fbFieldName }}AsByteBuffer().array() : null;
+                        dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}AsByteBuffer() != null ? fbDependent.{{ fbFieldName }}AsByteBuffer().array() : null;
                     {%- endif -%}
             {% endif %}
 

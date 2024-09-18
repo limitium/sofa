@@ -26,6 +26,17 @@ public class {{ entity.name }}{
 
                     int {{ fbFieldName }} = flatBufferBuilder.createVectorOfTables({{ fbFieldName }}Offsets);
                 {%- endif -%}
+                {%- if field.type.elementType.name == 'enum' -%}
+                    {%- set fbenum = field.type.elementType.enum | from("flatbuffers_entities") -%}
+
+
+                    byte[] {{ fbFieldName }}Offsets = new byte[dependent.{{ fieldName }}.size()];
+                    for (int i = 0; i < dependent.{{ field.name }}.size(); i++) {
+                        {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbenum.fullname }}.names, dependent.{{ fieldName }}.get(i));
+                    }
+
+                    int {{ fbFieldName }} = {{ fbe.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
+                {%- endif -%}
             {%- endif %}
              {%- if field.type.name == 'string' -%}
                 int {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
@@ -55,7 +66,7 @@ public class {{ entity.name }}{
                 {% endif %}
                 {%- if field.type.name == 'enum' -%}
                     {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
-                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}.name()));
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
@@ -141,9 +152,13 @@ public class {{ entity.name }}{
 
         return dependent;
     }
-    private static byte findEnumIndex(String[] enumNames, String name) {
+
+    private static byte findEnumIndex(String[] enumNames, Enum<?> enumVal) {
+        if(enumVal == null){
+            return 0;
+        }
         for (byte i = 0; i < enumNames.length; i++) {
-            if (enumNames[i] != null && enumNames[i].equals(name)) {
+            if (enumNames[i] != null && enumNames[i].equals(enumVal.name())) {
                 return i;
             }
         }

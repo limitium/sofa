@@ -29,7 +29,7 @@ public class {{ entity.name }}{
 
                     byte[] {{ fbFieldName }}Offsets = new byte[dependent.{{ fieldName }}.size()];
                     for (int i = 0; i < dependent.{{ field.name }}.size(); i++) {
-                        {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}.get(i).name());
+                        {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}.get(i));
                     }
 
                     int {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
@@ -68,7 +68,7 @@ public class {{ entity.name }}{
                 {% endif %}
                 {%- if field.type.name == 'enum' -%}
                     {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}.name()));
+                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
@@ -78,8 +78,9 @@ public class {{ entity.name }}{
                 {%- endif -%}
             {%- endif %}
 
-            return {{ fbm.name }}.end{{ fbm.name }}(flatBufferBuilder);
         {% endfor -%}
+
+        return {{ fbm.name }}.end{{ fbm.name }}(flatBufferBuilder);
     }
 
     public static {{ pojo.name }} buildPojoFrom({{ fbm.name }} fbDependent) {
@@ -126,9 +127,12 @@ public class {{ entity.name }}{
         return dependent;
     }
 
-    private static byte findEnumIndex(String[] enumNames, String name) {
+    private static byte findEnumIndex(String[] enumNames, Enum<?> enumVal) {
+        if(enumVal == null){
+            return 0;
+        }
         for (byte i = 0; i < enumNames.length; i++) {
-            if (enumNames[i] != null && enumNames[i].equals(name)) {
+            if (enumNames[i] != null && enumNames[i].equals(enumVal.name())) {
                 return i;
             }
         }

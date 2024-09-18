@@ -31,7 +31,7 @@ public class {{ entity.name }}{
 
                     byte[] {{ fbFieldName }}Offsets = new byte[root.{{ fieldName }}.size()];
                     for (int i = 0; i < root.{{ field.name }}.size(); i++) {
-                        {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, root.{{ fieldName }}.get(i).name());
+                        {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, root.{{ fieldName }}.get(i));
                     }
                     int {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
 
@@ -69,7 +69,7 @@ public class {{ entity.name }}{
                 {% endif %}
                 {%- if field.type.name == 'enum' -%}
                     {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, root.{{ fieldName }}.name()));
+                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, root.{{ fieldName }}));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
@@ -131,9 +131,12 @@ public class {{ entity.name }}{
         return root;
     }
 
-    private static byte findEnumIndex(String[] enumNames, String name) {
+    private static byte findEnumIndex(String[] enumNames, Enum<?> enumVal) {
+        if(enumVal == null){
+            return 0;
+        }
         for (byte i = 0; i < enumNames.length; i++) {
-            if (enumNames[i] != null && enumNames[i].equals(name)) {
+            if (enumNames[i] != null && enumNames[i].equals(enumVal.name())) {
                 return i;
             }
         }

@@ -1,5 +1,6 @@
 {% set pojo = entity | from("pojo_entities") %}
 {% set serde = entity | from("serde_entities") %}
+{% set owners = entity | flattenOwners %}
 package {{ entity.namespace }};
 
 import org.apache.kafka.common.errors.SerializationException;
@@ -64,6 +65,14 @@ public class {{ entity.name }} implements Converter {
             {% for field in entity | flattenFields('_') | noRecordLists -%}
                 .field("{{ field.name | toSnakeCase | upper }}", {{ field.type | connectSchemaType }})
             {% endfor %}
+            {% if owners.size == 1 %}
+            {% set owner = owners[0] | from("pojo_entities") %}
+                .field("{{ owner.name | toSnakeCase | upper }}_ID", Schema.INT64_SCHEMA)
+            {% endif %}
+            {% if owners.size > 1 %}
+                .field("OWNER_ENTITY", Schema.STRING_SCHEMA)
+                .field("OWNER_ID", Schema.INT64_SCHEMA)
+            {% endif %}
         ;
     }
 
@@ -81,8 +90,8 @@ public class {{ entity.name }} implements Converter {
                     {% if field.type.name == 'enum' %}
                         {%- set fbEnum = field.type.enum | from("flatbuffers_entities") %}
                         {%- set pojoEnum = field.type.enum | from("pojo_messages") %}
-                        .put("{{ fieldName }}", obj.{{ objFieldName }} != null ? obj.{{ objFieldName }}.name() : null)
-                    {% endif %}
+                                .put("{{ fieldName }}", obj.{{ objFieldName }} != null ? obj.{{ objFieldName }}.name() : null)
+                        {% endif %}
                     {% if field.type.name == 'array' %}
                         {%- if field.type.elementType.name == 'string' %}
                             .put("{{ fieldName }}", obj.{{ objFieldName }} != null ? String.join(";;;", obj.{{ objFieldName }}) : null)
@@ -97,6 +106,14 @@ public class {{ entity.name }} implements Converter {
                     {% endif %}
                 {% endif %}
             {% endfor %}
+            {% if owners.size == 1 %}
+                {% set owner = owners[0] | from("pojo_entities") %}
+                    .put("{{ owner.name | toSnakeCase | upper }}_ID", obj.{{ owner.name | toCamelCase }}Id)
+                {% endif %}
+            {% if owners.size > 1 %}
+                .put("OWNER_ENTITY", obj.ownerEntity)
+                .put("OWNER_ID", obj.ownerId)
+            {% endif %}
         ;
     }
 
@@ -123,8 +140,8 @@ public class {{ entity.name }} implements Converter {
                     obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}");
                 {%- endif -%}
                 {%- if field.type.name == 'enum' -%}
-                        {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
-                        {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
+                    {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
+                    {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
                         obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? {{ pojoEnum.fullname }}.valueOf(struct.{{ structGetter }}("{{ structFieldName }}")): null;
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}

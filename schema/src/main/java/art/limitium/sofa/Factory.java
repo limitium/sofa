@@ -1,10 +1,7 @@
 package art.limitium.sofa;
 
 import art.limitium.sofa.config.FactoryConfig;
-import art.limitium.sofa.ext.FBFactoryConverter;
-import art.limitium.sofa.ext.FBTypeConverter;
-import art.limitium.sofa.ext.FbIsPrimitiveConverter;
-import art.limitium.sofa.ext.JavaTypeConverter;
+import art.limitium.sofa.ext.*;
 import art.limitium.sofa.schema.Entity;
 import art.limitium.sofa.schema.TypeConverter;
 import com.mitchellbosecke.pebble.PebbleEngine;
@@ -239,7 +236,9 @@ public class Factory {
                 new FBTypeConverter(),
                 new FBFactoryConverter(),
                 new FbIsPrimitiveConverter(),
-                new JavaTypeConverter()
+                new JavaTypeConverter(),
+                new ConnectSchemaConverter(),
+                new ConnectStructGetterConverter()
         );
 
         engine.getExtensionRegistry().addExtension(new CustomExtension(typeConverters, schemas));

@@ -1,8 +1,8 @@
-{% set pojo = entity | from("pojo_entities") %}
-{% set serde = entity | from("serde_entities") %}
-{% set owners = entity | flattenOwners %}
+{% set pojo = entity | from("pojo_messages") %}
+{% set serde = entity | from("serde_messages") %}
 package {{ entity.namespace }};
 
+import com.google.gson.Gson;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.connect.data.Schema;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 
 public class {{ entity.name }} implements Converter {
-
+    Gson gson = new Gson();
     {{ serde.name }} serde = new {{ serde.name }}();
 
     @Override
@@ -63,23 +63,15 @@ public class {{ entity.name }} implements Converter {
 
     public SchemaBuilder fillSchema(SchemaBuilder builder){
         return builder
-            {% for field in entity | flattenFields('_') | noRecordLists -%}
+            {% for field in entity | flattenFields('_') -%}
                 .field("{{ field.name | toSnakeCase | upper }}", {{ field.type | connectSchemaType }})
             {% endfor %}
-            {% if owners.size == 1 %}
-            {% set owner = owners[0] | from("pojo_entities") %}
-                .field("{{ owner.name | toSnakeCase | upper }}_ID", Schema.INT64_SCHEMA)
-            {% endif %}
-            {% if owners.size > 1 %}
-                .field("OWNER_ENTITY", Schema.STRING_SCHEMA)
-                .field("OWNER_ID", Schema.INT64_SCHEMA)
-            {% endif %}
         ;
     }
 
     public void fillStruct(Struct struct, {{ pojo.name }} obj){
         struct
-            {% for field in entity | flattenFields('.') | noRecordLists %}
+            {% for field in entity | flattenFields('.') %}
                 {% set fieldName =  field.name | replace({'.':'_'}) | toSnakeCase | upper %}
                 {% set objFieldName = field.name | toCamelCase %}
                 {% if field.type | fbIsPrimitive %}
@@ -91,8 +83,8 @@ public class {{ entity.name }} implements Converter {
                     {% if field.type.name == 'enum' %}
                         {%- set fbEnum = field.type.enum | from("flatbuffers_entities") %}
                         {%- set pojoEnum = field.type.enum | from("pojo_messages") %}
-                                .put("{{ fieldName }}", obj.{{ objFieldName }} != null ? obj.{{ objFieldName }}.name() : null)
-                        {% endif %}
+                        .put("{{ fieldName }}", obj.{{ objFieldName }} != null ? obj.{{ objFieldName }}.name() : null)
+                    {% endif %}
                     {% if field.type.name == 'array' %}
                         {%- if field.type.elementType.name == 'string' %}
                             .put("{{ fieldName }}", obj.{{ objFieldName }} != null ? String.join(";;;", obj.{{ objFieldName }}) : null)
@@ -101,20 +93,15 @@ public class {{ entity.name }} implements Converter {
                             {% set pojoEnum = field.type.elementType.enum | from("pojo_messages") %}
                             .put("{{ fieldName }}", obj.{{ objFieldName }} != null ? obj.{{ objFieldName }}.stream().map(Enum::name).collect(Collectors.joining(",")) : null)
                         {% endif %}
+                        {% if field.type.elementType.name == 'record' %}
+                            .put("{{ fieldName }}", obj.{{ objFieldName }} != null ? gson.toJson(obj.{{ objFieldName }}) : null)
+                        {% endif %}
                     {% endif %}
                     {% if field.type.name == 'bytes' %}
                         .put("{{ fieldName }}", obj.{{ objFieldName }})
                     {% endif %}
                 {% endif %}
             {% endfor %}
-            {% if owners.size == 1 %}
-                {% set owner = owners[0] | from("pojo_entities") %}
-                    .put("{{ owner.name | toSnakeCase | upper }}_ID", obj.{{ owner.name | toCamelCase }}Id)
-                {% endif %}
-            {% if owners.size > 1 %}
-                .put("OWNER_ENTITY", obj.ownerEntity)
-                .put("OWNER_ID", obj.ownerId)
-            {% endif %}
         ;
     }
 
@@ -129,7 +116,7 @@ public class {{ entity.name }} implements Converter {
                 obj.{{ field.name }} = new {{ pojoRecord.fullname }}() ;
         {% endfor %}
 
-        {% for field in entity | flattenFields('.') | noRecordLists -%}
+        {% for field in entity | flattenFields('.') -%}
             {%- set fieldName = field.name | toCamelCase -%}
             {%- set structFieldName = field.name| replace({'.':'_'}) | toSnakeCase | upper -%}
             {%- set structGetter = field.type | connectStructGetter -%}
@@ -141,18 +128,22 @@ public class {{ entity.name }} implements Converter {
                     obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}");
                 {%- endif -%}
                 {%- if field.type.name == 'enum' -%}
-                    {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
-                    {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
+                        {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
+                        {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
                         obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? {{ pojoEnum.fullname }}.valueOf(struct.{{ structGetter }}("{{ structFieldName }}")): null;
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {%- if field.type.elementType.name == 'string' -%}
-                            obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.stream(struct.{{ structGetter }}("{{ structFieldName }}").split(";;;")).toList()) : null;
-                        {%- endif -%}
+                        obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.stream(struct.{{ structGetter }}("{{ structFieldName }}").split(";;;")).toList()) : null;
+                    {%- endif -%}
                     {%- if field.type.elementType.name == 'enum' -%}
                         {% set pojoEnum = field.type.elementType.enum | from("pojo_messages") %}
-                            obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.stream(struct.{{ structGetter }}("{{ structFieldName }}").split(",")).map({{ pojoEnum.fullname }}::valueOf).toList()) : null;
-                        {%- endif -%}
+                        obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.stream(struct.{{ structGetter }}("{{ structFieldName }}").split(",")).map({{ pojoEnum.fullname }}::valueOf).toList()) : null;
+                    {%- endif -%}
+                    {% if field.type.elementType.name == 'record' %}
+                        {% set pojoRecord = field.type.elementType.record | from("pojo_messages") %}
+                        obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.asList(gson.fromJson(struct.{{ structGetter }}("{{ structFieldName }}"), {{ pojoRecord.fullname }}[].class))) : null;
+                    {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
                         obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}");

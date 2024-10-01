@@ -89,3 +89,10 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "{{outputPath}}/main/java"
+  - path: "converter_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.converter"
+      name: "{{ schema.name }}Converter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/main/java"

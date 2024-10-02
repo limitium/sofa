@@ -1,9 +1,0 @@
-com.example.avro2.Root2
---com.example.avro.NestedRecord
-----com.example.avro.NestedNestedRecord
---com.example.avro2.NestedRecord2
-----com.example.avro.NestedNestedRecord
-com.example.avro2.Root3
---com.example.avro.NestedNestedRecord
---com.example.avro.NestedRecord
-----com.example.avro.NestedNestedRecord

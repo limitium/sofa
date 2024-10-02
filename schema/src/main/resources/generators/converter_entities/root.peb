@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 public class {{ entity.name }} implements Converter {
 
-    {{ serde.name }} serde = new {{ serde.name }}();
+    {{ serde.name }} serde = getSerde();
 
     @Override
     public void configure(Map<String, ?> configs, boolean isKey){
@@ -105,11 +105,12 @@ public class {{ entity.name }} implements Converter {
         {{ pojo.name }} obj = new {{ pojo.name }}();
 
         {% for field in entity | flattenRecords('.') %}
-        {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
-        {% if not pojoRecord.dependent %}
-            {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}
-        {% endif %}
-                obj.{{ field.name }} = new {{ pojoRecord.fullname }}() ;
+            {%- set fieldName = field.name | toCamelCase -%}
+            {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
+            {% if not pojoRecord.dependent %}
+                {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}
+            {% endif %}
+            obj.{{ fieldName }} = new {{ pojoRecord.fullname }}() ;
         {% endfor %}
 
         {% for field in entity | flattenFields('.') | noRecordLists -%}
@@ -124,25 +125,28 @@ public class {{ entity.name }} implements Converter {
                     obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}");
                 {%- endif -%}
                 {%- if field.type.name == 'enum' -%}
-                        {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
-                        {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
-                        obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? {{ pojoEnum.fullname }}.valueOf(struct.{{ structGetter }}("{{ structFieldName }}")): null;
+                    {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
+                    {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
+                    obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? {{ pojoEnum.fullname }}.valueOf(struct.{{ structGetter }}("{{ structFieldName }}")): null;
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {%- if field.type.elementType.name == 'string' -%}
-                            obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.stream(struct.{{ structGetter }}("{{ structFieldName }}").split(";;;")).toList()) : null;
-                        {%- endif -%}
+                        obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.stream(struct.{{ structGetter }}("{{ structFieldName }}").split(";;;")).toList()) : null;
+                    {%- endif -%}
                     {%- if field.type.elementType.name == 'enum' -%}
                         {% set pojoEnum = field.type.elementType.enum | from("pojo_messages") %}
-                            obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.stream(struct.{{ structGetter }}("{{ structFieldName }}").split(",")).map({{ pojoEnum.fullname }}::valueOf).toList()) : null;
-                        {%- endif -%}
+                        obj.{{ fieldName }} = struct.{{ structGetter }}("{{ structFieldName }}") != null ? new ArrayList<>(Arrays.stream(struct.{{ structGetter }}("{{ structFieldName }}").split(",")).map({{ pojoEnum.fullname }}::valueOf).toList()) : null;
+                    {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                        obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}");
+                    obj.{{ fieldName  }} = struct.{{ structGetter }}("{{ structFieldName }}");
                 {%- endif -%}
             {% endif %}
-
         {% endfor -%}
         return obj;
+    }
+
+    public {{ serde.name }} getSerde() {
+        return new {{ serde.name }}();
     }
 }

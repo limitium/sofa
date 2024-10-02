@@ -1,0 +1,39 @@
+{% set pojo = entity | from("pojo_entities") %}
+{% set serde = entity | from("serde_entities") %}
+{% set converter = entity | from("converter_entities") %}
+package {{ entity.namespace }};
+
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.DataException;
+import org.apache.kafka.connect.storage.Converter;
+import art.limitium.kafka.ksmodel.store.WrappedConverter;
+
+import {{ pojo.fullname }};
+import {{ serde.fullname }};
+import {{ converter.fullname }};
+
+public class {{ entity.name }} extends {{ converter.name }} implements WrappedConverter<{{ pojo.name }}> {
+
+    @Override
+    public SchemaBuilder fillSchema(SchemaBuilder builder){
+        return super.fillSchema(builder);
+    }
+
+    @Override
+    public void fillStruct(Struct struct, {{ pojo.name }} obj){
+        super.fillStruct(struct, obj);
+    }
+
+    @Override
+    public {{ pojo.name }} createObject(Schema schema, Struct struct){
+        return super.createObject(schema, struct);
+    }
+
+    @Override
+    public {{ serde.name }} getSerde(){
+        return super.getSerde();
+    }
+}

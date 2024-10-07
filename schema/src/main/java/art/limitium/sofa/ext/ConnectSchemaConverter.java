@@ -23,7 +23,7 @@ public class ConnectSchemaConverter implements TypeConverter {
             case Type.BytesType bytesType -> "Schema.OPTIONAL_BYTES_SCHEMA";
             case Type.DateType dateType -> "Schema.INT32_SCHEMA";
             case Type.TimeMillisType timeMillisType -> "Schema.INT32_SCHEMA";
-            case Type.TimeMicrosType timeMicrosType -> "Schema.INT32_SCHEMA";
+            case Type.TimeMicrosType timeMicrosType -> "Schema.INT64_SCHEMA";
             case Type.IntType intType -> "Schema.INT32_SCHEMA";
             case Type.TimestampMillisType timestampMillisType -> "Schema.INT64_SCHEMA";
             case Type.TimestampMicrosType timestampMicrosType -> "Schema.INT64_SCHEMA";

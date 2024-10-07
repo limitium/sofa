@@ -42,6 +42,14 @@ compileJava {
     options.compilerArgs += ['--enable-preview']
 }
 
+sourceSets {
+    main {
+        java {
+            srcDir "${buildDir}/generated/sources/java/main"
+        }
+    }
+}
+
 tasks {
     jar {
         dependsOn shadowJar

@@ -1,24 +1,24 @@
 package {{ entity.namespace }};
 
 public class {{ entity.name }}{
-{% for field in entity.fields | noRecordLists %}
-    public {{ field.type | javaType }} {{ field.name | toCamelCase }};
-{% endfor %}
-
-{% set owners = entity | flattenOwners %}    
-{% if owners.size > 0 %}
-    //Links do dependents {{ owners.size }} total
-    //Todo: check entities
-    {% for owner in owners %}
-        //{{ owner.name }}
-
+    {% for field in entity.fields | noRecordLists %}
+        public {{ field.type | javaType }} {{ field.name | toCamelCase }};
     {% endfor %}
-    {% if owners.size == 1 %}
-        public long {{ owners[0].name | toCamelCase }}Id;
+
+    {% set owners = entity | flattenOwners %}
+    {% if owners.size > 0 %}
+        //Links do dependents {{ owners.size }} total
+        //Todo: check entities
+        {% for owner in owners %}
+            //{{ owner.name }}
+
+        {% endfor %}
+        {% if owners.size == 1 %}
+            public long {{ owners[0].name | toCamelCase }}Id;
+        {% endif %}
+        {% if owners.size > 1 %}
+            public String ownerEntity;
+            public long ownerId;
+        {% endif %}
     {% endif %}
-    {% if owners.size > 1 %}
-        public String ownerEntity;
-        public long ownerId;
-    {% endif %}
-{% endif %}
 }

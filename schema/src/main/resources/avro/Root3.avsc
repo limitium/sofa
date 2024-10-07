@@ -13,7 +13,10 @@
     },
     {
       "name": "long_field",
-      "type": "long"
+      "type": {
+        "type":"long",
+        "primary": true
+      }
     },
     {
       "name": "timeField",

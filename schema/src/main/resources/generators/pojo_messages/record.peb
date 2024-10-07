@@ -1,7 +1,0 @@
-package {{ entity.namespace }};
-
-public class {{ entity.name }}{
-{% for field in entity.fields %}
-    public {{ field.type | javaType }} {{ field.name | toCamelCase }};
-{% endfor %}
-}

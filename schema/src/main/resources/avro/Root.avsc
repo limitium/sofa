@@ -6,7 +6,10 @@
     "fields": [
         {"name": "stringField", "type": "string"},
         {"name": "intField", "type": "int"},
-        {"name": "longField", "type": "long"},
+        {"name": "longField",       "type": {
+            "type":"long",
+            "primary": true
+        }},
         {"name": "timeField", "type": {"type": "long","logicalType": "timestamp-millis"}},
         {"name": "dateField", "type": {"type": "string", "logicalType": "date-YYYYMMDD", "qwe": "asd"}},
         {"name": "floatField", "type": "float"},

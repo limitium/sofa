@@ -1,0 +1,36 @@
+{% set owners = entity | flattenOwners %}
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xmlns:pro="http://www.liquibase.org/xml/ns/pro"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+        http://www.liquibase.org/xml/ns/dbchangelog-ext
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd
+        http://www.liquibase.org/xml/ns/pro
+        http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd">
+
+<changeSet id="create-table" author="liquibase_message_generator">
+    <createTable tableName="{{ entity.name | toSnakeCase | upper }}">
+        {% for field in entity | flattenFields('_') | noRecordLists %}
+    {% set fieldName =  field.name | toSnakeCase | upper %}
+            <column name="{{ fieldName }}" type="{{ field.type | liquidBaseType }}">
+            {% if field.isPrimary %}
+                <constraints  primaryKey="true"  nullable="false"/>
+            {% endif %}
+            </column>
+        {% endfor %}
+        {% if owners.size == 1 %}
+            {% set owner = owners[0] | from("pojo_entities") %}
+            <column name="{{ owner.name | toSnakeCase | upper }}_ID" type="bigint" />
+        {% endif %}
+        {% if owners.size > 1 %}
+            <column name="OWNER_ENTITY" type="bigint" />
+            <column name="OWNER_ID" type="varchar2(255)" />
+        {% endif %}
+    </createTable>
+</changeSet>
+
+</databaseChangeLog>

@@ -39,6 +39,13 @@ generators:
       folder: "{{outputPath}}/fbs"
     overrides: "flatbuffers_messages"
     postCall: "{{ flatcCMD }} {{outputPath}}/java/main {{ files | join(' ') }}"
+  - path: "pojo_common"
+    templates:
+      namespace: "{{ schema.namespace }}.common.pojo"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
   - path: "pojo_messages"
     templates:
       namespace: "{{ schema.namespace }}.messages.pojo"
@@ -46,6 +53,7 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "{{outputPath}}/java/main"
+    overrides: "pojo_common"
   - path: "pojo_entities"
     templates:
       namespace: "{{ schema.namespace }}.entities.pojo"
@@ -53,7 +61,7 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "{{outputPath}}/java/main"
-    overrides: "pojo_messages"
+    overrides: "pojo_common"
   - path: "builder_messages"
     templates:
       namespace: "{{ schema.namespace }}.messages.builder"
@@ -110,3 +118,17 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "{{outputPath}}/java/main"
+  - path: "liquibase_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.liquibase"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace | toSnakeCase }}_{{ name }}"
+      filename: "1.0-create-table-{{ fullname | upper }}.xml"
+      folder: "{{outputPath}}/liquibase"
+  - path: "liquibase_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.liquibase"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace | toSnakeCase }}_{{ name }}"
+      filename: "1.0-create-table-{{ fullname | upper }}.xml"
+      folder: "{{outputPath}}/liquibase"

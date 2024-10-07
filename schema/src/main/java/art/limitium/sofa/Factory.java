@@ -38,12 +38,26 @@ public class Factory {
     static Logger logger = LoggerFactory.getLogger(Factory.class);
 
 
+    private static List<TypeConverter> typeConverters = List.of(
+            new FBTypeConverter(),
+            new FBFactoryConverter(),
+            new FbIsPrimitiveConverter(),
+            new JavaTypeConverter(),
+            new ConnectSchemaConverter(),
+            new ConnectStructGetterConverter(),
+            new LiquidBaseTypeConverter()
+    );
+
     static PebbleEngine inlineEngine = new PebbleEngine.Builder()
             .loader(new StringLoader())
             .newLineTrimming(true)
             .strictVariables(true)
             .build();
 
+    static {
+        //@todo: FIX IT ASAP!!!111
+        inlineEngine.getExtensionRegistry().addExtension(new CustomExtension(typeConverters, Map.of()));
+    }
 
     public static void main(String[] args) {
         if (args.length < 1) {
@@ -52,7 +66,7 @@ public class Factory {
         Instant startTime = Instant.now();
         String[] configPaths = args[0].split(",");
 
-        logger.info("Provided configurations {}:\r\n{}",configPaths.length, String.join("\r\n", configPaths));
+        logger.info("Provided configurations {}:\r\n{}", configPaths.length, String.join("\r\n", configPaths));
 
         Arrays.stream(configPaths).sequential().forEach(Factory::generateForConfiguration);
 
@@ -232,14 +246,6 @@ public class Factory {
                 .strictVariables(true)
                 .build();
 
-        List<TypeConverter> typeConverters = List.of(
-                new FBTypeConverter(),
-                new FBFactoryConverter(),
-                new FbIsPrimitiveConverter(),
-                new JavaTypeConverter(),
-                new ConnectSchemaConverter(),
-                new ConnectStructGetterConverter()
-        );
 
         engine.getExtensionRegistry().addExtension(new CustomExtension(typeConverters, schemas));
         return engine;
@@ -289,6 +295,7 @@ public class Factory {
         return stringWriter.toString();
     }
 }
+//todo: external conditions per template generation
 //todo: Do not override if overridden entity structure exactly the same
 //todo: Extensions for filters, types from CP and injection via yaml
 //todo: Gradle plugin/script to run¡

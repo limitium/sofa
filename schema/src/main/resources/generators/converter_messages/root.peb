@@ -110,7 +110,7 @@ public class {{ entity.name }} implements Converter {
 
         {% for field in entity | flattenRecords('.') %}
             {%- set fieldName = field.name | toCamelCase -%}
-            {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
+            {%- set pojoRecord = field.type.record | from("pojo_messages")  -%}
             {% if not pojoRecord.dependent %}
                 {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}
             {% endif %}

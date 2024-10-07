@@ -51,12 +51,14 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
             String name,
             Type type
     ) {
+        public boolean isPrimary(){
+            return type.getProperty("primary") != null && (Boolean) type.getProperty("primary");
+        }
     }
 
     public Field getPrimaryKey() {
         List<Field> primaryKeys = fields.stream()
-                .filter(f -> f.type.getProperty("primary") != null)
-                .filter(f -> (boolean) (Boolean) f.type.getProperty("primary"))
+                .filter(Field::isPrimary)
                 .toList();
 
         if (primaryKeys.isEmpty()) {

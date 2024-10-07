@@ -18,6 +18,7 @@ public class EnumEntity extends Entity {
         return symbols;
     }
 
+    @SuppressWarnings("unchecked")
     public List<String> getAliases() {
         return (List<String>) getSchema().getObjectProp("symbol_aliases");
     }

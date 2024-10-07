@@ -20,7 +20,7 @@ public class ConnectStructGetterConverter implements TypeConverter {
             case Type.BytesType bytesType -> "getBytes";
             case Type.DateType dateType -> "getInt32";
             case Type.TimeMillisType timeMillisType -> "getInt32";
-            case Type.TimeMicrosType timeMicrosType -> "getInt32";
+            case Type.TimeMicrosType timeMicrosType -> "getInt64";
             case Type.IntType intType -> "getInt32";
             case Type.TimestampMillisType timestampMillisType -> "getInt64";
             case Type.TimestampMicrosType timestampMicrosType -> "getInt64";

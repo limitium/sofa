@@ -38,7 +38,7 @@ public class JavaTypeConverter implements TypeConverter {
             case Type.BytesType bytesType -> "byte[]";
             case Type.DateType dateType -> "int";
             case Type.TimeMillisType timeMillisType -> "int";
-            case Type.TimeMicrosType timeMicrosType -> "int";
+            case Type.TimeMicrosType timeMicrosType -> "long";
             case Type.IntType intType -> "int";
             case Type.TimestampMillisType timestampMillisType -> "long";
             case Type.TimestampMicrosType timestampMicrosType -> "long";

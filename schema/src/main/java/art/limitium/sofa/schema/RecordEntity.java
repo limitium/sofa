@@ -3,18 +3,16 @@ package art.limitium.sofa.schema;
 import org.apache.avro.Schema;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import java.util.*;
 
 public class RecordEntity extends Entity implements Owner<Entity>, Dependency<RecordEntity> {
     @Nonnull
     private final List<Field> fields;
     private final List<Entity> dependencies = new ArrayList<>();
+    //Opposite to dependencies to travel to the root
+    private final Set<RecordEntity> parents = new HashSet<>();
 
+    //Tracks 1-N relations
     private final List<RecordEntity> owners = new ArrayList<>();
 
     private final boolean isRoot;
@@ -47,11 +45,15 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
         return !owners.isEmpty();
     }
 
+    public Set<RecordEntity> getParents() {
+        return parents;
+    }
+
     public record Field(
             String name,
             Type type
     ) {
-        public boolean isPrimary(){
+        public boolean isPrimary() {
             return type.getProperty("primary") != null && (Boolean) type.getProperty("primary");
         }
     }

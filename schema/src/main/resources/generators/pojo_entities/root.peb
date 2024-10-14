@@ -2,6 +2,26 @@ package {{ entity.namespace }};
 
 public class {{ entity.name }}{
     {% for field in entity.fields | noRecordLists %}
-        public {{ field.type | javaType }} {{ field.name | toCamelCase }};
+{#        {% if field.type.name == 'record' %}#}
+{#        {% set record = field.type | from('pojo_common') %}#}
+{#        {% if field.type.withRecordLists %}#}
+{#            {% set %}#}
+{#        {% endif %}#}
+{#            public {{ record.type | javaType }} {{ field.name | toCamelCase }};#}
+{#        {% else %}#}
+            public {{ field.type | javaType }} {{ field.name | toCamelCase }};
+{#        {% endif %}#}
+    {% endfor %}
+
+    {% for field in entity.fields | noRecordLists %}
+
+        public void set{{ field.name | toCamelCase | capitalize }}({{ field.type | javaType }} val){
+            this.{{ field.name | toCamelCase }} = val;
+        }
+
+        public {{ field.type | javaType }} get{{ field.name | toCamelCase | capitalize }}(){
+            return this.{{ field.name | toCamelCase }};
+        }
+
     {% endfor %}
 }

@@ -95,6 +95,13 @@
                 }
               ]
             }
+          },
+          {
+            "name": "nnested33ListField",
+            "type": {
+              "type": "array",
+              "items": "NestedNestedRecord33"
+            }
           }
         ]
       }

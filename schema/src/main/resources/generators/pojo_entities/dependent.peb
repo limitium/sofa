@@ -21,4 +21,48 @@ public class {{ entity.name }}{
             public long ownerId;
         {% endif %}
     {% endif %}
+
+    {% for field in entity.fields | noRecordLists%}
+
+        public void set{{ field.name | toCamelCase | capitalize }}({{ field.type | javaType }} val){
+            this.{{ field.name | toCamelCase }} = val;
+        }
+
+        public {{ field.type | javaType }} get{{ field.name | toCamelCase | capitalize }}(){
+            return this.{{ field.name | toCamelCase }};
+        }
+
+    {% endfor %}
+
+    {% if owners.size > 0 %}
+        {% if owners.size == 1 %}
+
+            public void set{{ owners[0].name | toCamelCase | capitalize }}Id(long val){
+                this.{{ owners[0].name | toCamelCase }}Id = val;
+            }
+
+            public long get{{ owners[0].name | toCamelCase |capitalize }}Id(){
+                return this.{{ owners[0].name | toCamelCase }}Id;
+            }
+
+        {% endif %}
+        {% if owners.size > 1 %}
+
+            public void setOwnerEntity(String val){
+                this.ownerEntity = val;
+            }
+
+            public void setOwnerId(long val){
+                this.ownerId = val;
+            }
+
+            public String getOwnerEntity(){
+                this.ownerEntity;
+            }
+
+            public long setOwnerId(long val){
+                return this.ownerId;
+            }
+        {% endif %}
+    {% endif %}
 }

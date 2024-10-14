@@ -18,7 +18,8 @@ public class SchemaDefinition {
         if (schema.getType() == Schema.Type.RECORD) {
             for (Schema.Field field : schema.getFields()) {
                 if (field.schema().getType() == Schema.Type.RECORD || field.schema().getType() == Schema.Type.ENUM) {
-                    avroEntity.dependencies.put(field.schema().getFullName(), addRecord(field.schema()));
+                    AvroEntity childRecord = addRecord(field.schema());
+                    avroEntity.dependencies.put(field.schema().getFullName(), childRecord);
                 }
                 if (field.schema().getType() == Schema.Type.ARRAY) {
                     unfoldArray(avroEntity, field.schema().getElementType());

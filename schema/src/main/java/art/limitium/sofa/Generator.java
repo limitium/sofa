@@ -103,7 +103,11 @@ public class Generator {
             if (entity instanceof RecordEntity recordEntity) {
                 //Regular direct dependencies
                 for (AvroEntity dependency : avroEntity.dependencies.values()) {
-                    recordEntity.getDependencies().add(mapByAvroName.get(dependency.getFullname()));
+                    Entity dependencyEntity = mapByAvroName.get(dependency.getFullname());
+                    recordEntity.getDependencies().add(dependencyEntity);
+                    if(dependencyEntity instanceof RecordEntity dependencyRecordEntity){
+                        dependencyRecordEntity.getParents().add(recordEntity);
+                    }
                 }
 
                 //1-N relations
@@ -156,7 +160,9 @@ public class Generator {
         if ((mainTemplates.containsKey("enum") && entity.schema.getType() == Schema.Type.ENUM)
                 || (mainTemplates.containsKey("root") && entity.schema.getType() == Schema.Type.RECORD && entity.isRoot)
                 || (mainTemplates.containsKey("dependent") && entity.schema.getType() == Schema.Type.RECORD && !entity.owners.isEmpty())
-                || mainTemplates.containsKey("record")) {
+                || (mainTemplates.containsKey("child") && entity.schema.getType() == Schema.Type.RECORD && !entity.isRoot)
+                || mainTemplates.containsKey("record")
+        ) {
             return true;
         }
 
@@ -199,6 +205,9 @@ public class Generator {
             } else if (mainTemplates.containsKey("dependent") && !recordEntity.getOwners().isEmpty()) {
                 Factory.logger.info("Generate dependent {} into {}", recordEntity.getFullname(), fileName);
                 template = mainTemplates.get("dependent");
+            } else if (mainTemplates.containsKey("child") && !recordEntity.isRoot()) {
+                Factory.logger.info("Generate child {} into {}", recordEntity.getFullname(), fileName);
+                template = mainTemplates.get("child");
             } else {
                 Factory.logger.info("Generate record {} into {}", recordEntity.getFullname(), fileName);
                 template = mainTemplates.get("record");

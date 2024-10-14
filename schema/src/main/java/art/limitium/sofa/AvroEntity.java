@@ -5,14 +5,12 @@ import art.limitium.sofa.schema.NamedEntity;
 import art.limitium.sofa.schema.Owner;
 import org.apache.avro.Schema;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class AvroEntity implements Owner<AvroEntity>, Dependency<AvroEntity>, NamedEntity {
     public Schema schema;
     public Map<String, AvroEntity> dependencies = new HashMap<>();
+    //for 1-N relations only
     public List<AvroEntity> owners = new ArrayList<>();
     public boolean isRoot = false;
 

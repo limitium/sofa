@@ -363,18 +363,18 @@ public class CustomExtension extends AbstractExtension {
         public Object apply(Object o, Map<String, Object> args, PebbleTemplate pebbleTemplate, EvaluationContext evaluationContext, int i) throws PebbleException {
             if (o instanceof RecordEntity record && record.isDependent()) {
                 Set<RecordEntity> flattenOwners = new HashSet<>();
-                flattenOwners(record.getOwners(), flattenOwners);
+                flattenOwners(record.getParents(), flattenOwners);
                 return flattenOwners.stream().toList();
             }
             return o;
         }
 
-        private void flattenOwners(List<RecordEntity> owners, Set<RecordEntity> flattenOwners) {
+        private void flattenOwners(Set<RecordEntity> owners, Set<RecordEntity> flattenOwners) {
             owners.forEach(o -> {
                 if (o.isDependent() || o.isRoot()) {
                     flattenOwners.add(o);
                 } else {
-                    flattenOwners(o.getOwners(), flattenOwners);
+                    flattenOwners(o.getParents(), flattenOwners);
                 }
             });
         }

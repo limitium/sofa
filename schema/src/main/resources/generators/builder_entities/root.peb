@@ -81,7 +81,7 @@ public class {{ entity.name }}{
         {% for field in entity | flattenRecords('.') %}
             {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
             {% if not pojoRecord.dependent %}
-                {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}
+                {%- set pojoRecord = pojoRecord | from("pojo_common")  -%}
             {% endif %}
             root.{{ field.name | toCamelCase }} = new {{ pojoRecord.fullname }}() ;
         {% endfor %}
@@ -98,7 +98,7 @@ public class {{ entity.name }}{
                 {%- endif -%}
                 {%- if field.type.name == 'enum' -%}
                     {%- set fbEnum = field.type.enum | from("flatbuffers_entities") -%}
-                    {%- set pojoEnum = field.type.enum | from("pojo_messages") -%}
+                    {%- set pojoEnum = field.type.enum | from("pojo_common") -%}
                     root.{{ fieldName }} = fbRoot.{{ fbFieldName }}() == 0 ? null : {{ pojoEnum.fullname }}.valueOf({{  fbEnum.fullname }}.name(fbRoot.{{ fbFieldName }}()));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
@@ -106,7 +106,7 @@ public class {{ entity.name }}{
                         root.{{ fieldName }} = java.util.stream.IntStream.range(0, fbRoot.{{ fbFieldName }}Length()).mapToObj(i->fbRoot.{{ fbFieldName }}Vector().get(i)).toList();
                     {%- endif -%}
                     {%- if field.type.elementType.name == 'enum' -%}
-                        {% set pojoEnum = field.type.elementType.enum | from("pojo_messages") %}
+                        {% set pojoEnum = field.type.elementType.enum | from("pojo_common") %}
                         root.{{ fieldName }} = java.util.stream.IntStream.range(0, fbRoot.{{ fbFieldName }}Length()).mapToObj(i->{{ pojoEnum.fullname }}.values()[fbRoot.{{ fbFieldName }}Vector().get(i)]).toList();
                     {%- endif -%}
                 {%- endif -%}

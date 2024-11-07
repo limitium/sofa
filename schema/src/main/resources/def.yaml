@@ -118,6 +118,20 @@ generators:
       fullname: "{{ namespace }}.{{ name }}"
       filename: "{{ fullname | replace({'.':'/'}) }}.java"
       folder: "{{outputPath}}/java/main"
+  - path: "converter_dlq_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.converter.dlq"
+      name: "{{ schema.name }}DLQEnvelopeWrappedConverter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "converter_dlq_value_only_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.converter.dlq"
+      name: "Only{{ schema.name }}DLQEnvelopeWrappedConverter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
   - path: "liquibase_messages"
     templates:
       namespace: "{{ schema.namespace }}.messages.liquibase"

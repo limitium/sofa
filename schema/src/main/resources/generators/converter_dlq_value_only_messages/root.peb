@@ -1,0 +1,52 @@
+{% set pojo = entity | from("pojo_messages") %}
+{% set converter = entity | from("converter_wrapped_messages") %}
+package {{ entity.namespace }};
+
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.DataException;
+import art.limitium.kafka.ksmodel.store.WrappedConverter;
+import art.limitium.kscore.kstreamcore.dlq.DLQEnvelope;
+
+import {{ pojo.fullname }};
+import {{ converter.fullname }};
+
+
+public class {{ entity.name }} extends WrappedValueConverter<DLQEnvelope, {{ pojo.name }}> {
+
+    @Override
+    protected WrappedConverter<DLQEnvelope> getWrappedConverter() {
+        return new WrappedConverter<>() {
+            @Override
+            public SchemaBuilder fillSchema(SchemaBuilder builder) {
+                return builder
+                        .field("DLQ_ENVELOPE_ID", Schema.INT64_SCHEMA);
+            }
+
+            @Override
+            public void fillStruct(Struct struct, DLQEnvelope dlqEnvelope) {
+                struct
+                    .put("DLQ_ENVELOPE_ID", dlqEnvelope.id());
+            }
+
+            @Override
+            public DLQEnvelope createObject(Schema schema, Struct struct) {
+                return null;
+            }
+
+            @Override
+            public Serde<DLQEnvelope> getSerde() {
+                return DLQEnvelope.DLQEnvelopeSerde();
+            }
+        };
+    }
+
+    @Override
+    protected WrappedConverter<{{ pojo.name }}> getValueConverter() {
+        return new {{ converter.name }}();
+    }
+}
+
+

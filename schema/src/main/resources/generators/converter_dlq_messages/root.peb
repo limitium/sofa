@@ -1,0 +1,25 @@
+{% set pojo = entity | from("pojo_messages") %}
+{% set converter = entity | from("converter_wrapped_messages") %}
+package {{ entity.namespace }};
+
+import org.apache.kafka.common.serialization.Serde;
+import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
+import org.apache.kafka.connect.data.Struct;
+import org.apache.kafka.connect.errors.DataException;
+import art.limitium.kafka.ksmodel.store.WrappedConverter;
+import art.limitium.kscore.kstreamcore.dlq.DLQEnvelopeWrappedValueConverter;
+
+import {{ pojo.fullname }};
+import {{ converter.fullname }};
+
+
+public class {{ entity.name }} extends DLQEnvelopeWrappedValueConverter<{{ pojo.name }}> {
+
+    @Override
+    protected WrappedConverter<{{ pojo.name }}> getValueConverter() {
+        return new {{ converter.name }}();
+    }
+}
+
+

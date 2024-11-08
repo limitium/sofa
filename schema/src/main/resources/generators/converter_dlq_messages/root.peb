@@ -8,7 +8,7 @@ import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.DataException;
 import art.limitium.kafka.ksmodel.store.WrappedConverter;
-import art.limitium.kscore.kstreamcore.dlq.DLQEnvelopeWrappedValueConverter;
+import art.limitium.kafka.kscore.kstreamcore.dlq.DLQEnvelopeWrappedValueConverter;
 
 import {{ pojo.fullname }};
 import {{ converter.fullname }};

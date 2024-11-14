@@ -27,6 +27,18 @@ public class Generator {
     private final String basePath;
     private String folder;
 
+    /**
+     * Creates a new Generator instance
+     * 
+     * @param name Name of the generator
+     * @param mainTemplates Map of main templates used for code generation
+     * @param templates Templates for namespace/name/path generation
+     * @param overrides name generators to override
+     * @param filters Configuration for filtering entities
+     * @param postCall Template for post-generation command
+     * @param schemas Map of schema name to entities
+     * @param valuesContext Context values for template evaluation
+     */
     public Generator(String name, Map<String, PebbleTemplate> mainTemplates, Templates templates, String overrides, FiltersConfig filters, PebbleTemplate postCall, Map<String, Map<String, Entity>> schemas, Map<String, String> valuesContext) {
         this.name = name;
         this.mainTemplates = mainTemplates;
@@ -39,7 +51,13 @@ public class Generator {
         this.basePath = valuesContext.get("basePath");
     }
 
-
+    /**
+     * Evaluates a template and writes output to a file
+     *
+     * @param template The template to evaluate
+     * @param context Context map for template evaluation
+     * @param filePath Path of output file
+     */
     public void evaluateTemplateToFile(PebbleTemplate template, Map<String, Object> context, String filePath) {
         Factory.logger.debug("Evaluate template {} to file {} with context {}", template, filePath, context.keySet());
         try (FileWriter fileWriter = new FileWriter(filePath)) {
@@ -49,6 +67,11 @@ public class Generator {
         }
     }
 
+    /**
+     * Main generation method that processes Avro entities and generates code
+     *
+     * @param avroEntities List of Avro entities to generate code for
+     */
     public void generate(List<AvroEntity> avroEntities) {
         Map<String, Entity> entities = new HashMap<>();
         Map<String, Entity> mapByAvroName = new HashMap<>();
@@ -144,6 +167,12 @@ public class Generator {
         }
     }
 
+    /**
+     * Determines if an entity should have code generated for it based on filters and available templates
+     *
+     * @param entity The entity to check
+     * @return true if code should be generated for this entity
+     */
     private boolean shouldBeGenerated(AvroEntity entity) {
         if (filters != null) {
             //@todo: enforce white list items be in scope of work
@@ -159,6 +188,7 @@ public class Generator {
 
         if ((mainTemplates.containsKey("enum") && entity.schema.getType() == Schema.Type.ENUM)
                 || (mainTemplates.containsKey("root") && entity.schema.getType() == Schema.Type.RECORD && entity.isRoot)
+                || (mainTemplates.containsKey("owner") && entity.schema.getType() == Schema.Type.RECORD && entity.isOwner())
                 || (mainTemplates.containsKey("dependent") && entity.schema.getType() == Schema.Type.RECORD && !entity.owners.isEmpty())
                 || (mainTemplates.containsKey("child") && entity.schema.getType() == Schema.Type.RECORD && !entity.isRoot)
                 || mainTemplates.containsKey("record")
@@ -170,6 +200,12 @@ public class Generator {
         return false;
     }
 
+    /**
+     * Generates code for a single entity
+     *
+     * @param entity The entity to generate code for
+     * @return The path to the generated file
+     */
     public String generateFor(Entity entity) {
         Map<String, Object> context = new HashMap<>();
         context.put("namespace", entity.getNamespace());
@@ -202,6 +238,9 @@ public class Generator {
             if (mainTemplates.containsKey("root") && recordEntity.isRoot()) {
                 Factory.logger.info("Generate root {} into {}", recordEntity.getFullname(), fileName);
                 template = mainTemplates.get("root");
+            } else if (mainTemplates.containsKey("owner") && recordEntity.isOwner()) {
+                Factory.logger.info("Generate owner {} into {}", recordEntity.getFullname(), fileName);
+                template = mainTemplates.get("owner");
             } else if (mainTemplates.containsKey("dependent") && !recordEntity.getOwners().isEmpty()) {
                 Factory.logger.info("Generate dependent {} into {}", recordEntity.getFullname(), fileName);
                 template = mainTemplates.get("dependent");
@@ -230,7 +269,12 @@ public class Generator {
         return fileName;
     }
 
-
+    /**
+     * Generates a name for an entity using the name template if available
+     *
+     * @param schema The schema to generate a name for
+     * @return The generated name
+     */
     private String generateName(Schema schema) {
         String name = schema.getName();
         if (templates.name != null) {
@@ -239,6 +283,12 @@ public class Generator {
         return name;
     }
 
+    /**
+     * Generates a namespace for an entity using the namespace template if available
+     *
+     * @param schema The schema to generate a namespace for
+     * @return The generated namespace
+     */
     private String generateNamespace(Schema schema) {
         String namespace = schema.getNamespace();
         if (templates.namespace != null) {
@@ -247,6 +297,14 @@ public class Generator {
         return namespace;
     }
 
+    /**
+     * Generates a full name for an entity using the fullname template if available
+     *
+     * @param namespace The namespace
+     * @param name The name
+     * @param schema The schema
+     * @return The generated full name
+     */
     private String generateFullname(String namespace, String name, Schema schema) {
         String fullname = namespace + "." + name;
         if (templates.namespace != null) {
@@ -255,6 +313,12 @@ public class Generator {
         return fullname;
     }
 
+    /**
+     * Generates a filename for an entity using the filename template if available
+     *
+     * @param entity The entity to generate a filename for
+     * @return The generated filename
+     */
     private String generateFilename(Entity entity) {
         String filename = entity.getName();
         if (templates.filename != null) {
@@ -263,6 +327,12 @@ public class Generator {
         return filename;
     }
 
+    /**
+     * Generates a folder path for an entity using the folder template if available
+     *
+     * @param entity The entity to generate a folder path for
+     * @return The generated folder path
+     */
     private String generateFolder(Entity entity) {
         String folder = entity.getNamespace();
         if (templates.folder != null) {
@@ -271,6 +341,12 @@ public class Generator {
         return folder;
     }
 
+    /**
+     * Generates a post-generation command using the postCall template if available
+     *
+     * @param files List of generated files
+     * @return The generated command or null if no postCall template
+     */
     private String generatePostCall(List<String> files) {
         if (this.postCall != null) {
             return Factory.evaluateTemplateToString(this.postCall, extendValuesContext(Map.of("files", files)));
@@ -278,16 +354,30 @@ public class Generator {
         return null;
     }
 
+    /**
+     * Creates a new context map by combining the values context with additional values
+     *
+     * @param extension Additional context values to add
+     * @return Combined context map
+     */
     private HashMap<String, Object> extendValuesContext(Map<String, Object> extension) {
         HashMap<String, Object> extendedContext = new HashMap<>(valuesContext);
         extendedContext.putAll(extension);
         return extendedContext;
     }
 
+    /**
+     * Gets the name of this generator
+     *
+     * @return The generator name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Record containing templates for generating names and paths
+     */
     public record Templates(
             PebbleTemplate namespace,
             PebbleTemplate name,

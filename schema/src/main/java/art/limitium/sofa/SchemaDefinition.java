@@ -6,9 +6,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
+/**
+ * Represents a schema definition containing Avro entities and their relationships.
+ * This class helps build and analyze the dependency graph between Avro records.
+ */
 public class SchemaDefinition {
+    /**
+     * List of root Avro entities that have no parent dependencies
+     */
     List<AvroEntity> roots;
+    /**
+     * Map of all Avro entities keyed by their full name
+     */
     Map<String, AvroEntity> records = new HashMap<>();
 
     public AvroEntity addRecord(Schema schema) {

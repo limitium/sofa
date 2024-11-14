@@ -37,7 +37,9 @@ import static java.util.function.Function.identity;
 public class Factory {
     static Logger logger = LoggerFactory.getLogger(Factory.class);
 
-
+    /**
+     * List of type converters used for converting between different type systems
+     */
     private static List<TypeConverter> typeConverters = List.of(
             new FBTypeConverter(),
             new FBFactoryConverter(),
@@ -48,6 +50,9 @@ public class Factory {
             new LiquidBaseTypeConverter()
     );
 
+    /**
+     * Pebble engine instance for evaluating inline templates
+     */
     static PebbleEngine inlineEngine = new PebbleEngine.Builder()
             .loader(new StringLoader())
             .newLineTrimming(true)
@@ -59,6 +64,10 @@ public class Factory {
         inlineEngine.getExtensionRegistry().addExtension(new CustomExtension(typeConverters, Map.of()));
     }
 
+    /**
+     * Main entry point for code generation
+     * @param args Command line arguments - expects path(s) to generator definition file(s)
+     */
     public static void main(String[] args) {
         if (args.length < 1) {
             throw new RuntimeException("Path to generator definition file is missed");
@@ -74,6 +83,10 @@ public class Factory {
         logger.info("Generation successful in {}.{}s", duration.toSeconds(), duration.toMillisPart());
     }
 
+    /**
+     * Generates code based on a single configuration file
+     * @param configPath Path to the configuration file
+     */
     private static void generateForConfiguration(String configPath) {
         logger.info("Loading configuration from {}", configPath);
         File configFile = new File(configPath);
@@ -214,7 +227,11 @@ public class Factory {
         }
     }
 
-
+    /**
+     * Converts a list of root AvroEntities into a flattened, reversed list with unique entries
+     * @param roots List of root AvroEntities
+     * @return Flattened and reversed list of AvroEntities
+     */
     private static List<AvroEntity> convertTriesToUniqReverseRecords(List<AvroEntity> roots) {
         List<AvroEntity> reversedFlattedList = new ArrayList<>();
         TriesToReverseListConverter<AvroEntity> triesToReverseListConverter = new TriesToReverseListConverter<>();
@@ -226,6 +243,13 @@ public class Factory {
         return reversedFlattedList;
     }
 
+    /**
+     * Creates a PebbleEngine instance configured for a specific path
+     * @param filePath File system path to templates
+     * @param classPath Classpath to templates
+     * @param schemas Map of schema definitions
+     * @return Configured PebbleEngine instance
+     */
     private static PebbleEngine createPebbleEngineForPath(String filePath, String classPath, Map<String, Map<String, Entity>> schemas) {
         FileLoader fileLoader = new FileLoader();
         fileLoader.setPrefix(filePath);
@@ -251,6 +275,12 @@ public class Factory {
         return engine;
     }
 
+    /**
+     * Loads and parses Avro schemas from files
+     * @param basePath Base directory path
+     * @param schemas List of schema file paths
+     * @return SchemaDefinition containing parsed schemas
+     */
     private static SchemaDefinition loadSchema(String basePath, List<String> schemas) {
         SchemaDefinition schemaDefinition = new SchemaDefinition();
         Parser parser = new Parser();
@@ -274,16 +304,33 @@ public class Factory {
         return schemaDefinition;
     }
 
+    /**
+     * Loads factory configuration from a YAML file
+     * @param configFile Configuration file
+     * @return Parsed FactoryConfig object
+     * @throws FileNotFoundException if config file not found
+     */
     private static FactoryConfig loadFactoryConfig(File configFile) throws FileNotFoundException {
         Yaml yaml = new Yaml(new Constructor(FactoryConfig.class, new LoaderOptions()));
         InputStream targetStream = new FileInputStream(configFile);
         return yaml.load(targetStream);
     }
 
+    /**
+     * Compiles a string template into a PebbleTemplate
+     * @param template Template string
+     * @return Compiled PebbleTemplate
+     */
     private static PebbleTemplate compileInlineTemplate(String template) {
         return inlineEngine.getTemplate(template);
     }
 
+    /**
+     * Evaluates a template with given context and returns result as string
+     * @param template PebbleTemplate to evaluate
+     * @param context Context map for template evaluation
+     * @return Evaluated template as string
+     */
     @SuppressWarnings("unchecked")
     static String evaluateTemplateToString(PebbleTemplate template, Map<String, ?> context) {
         StringWriter stringWriter = new StringWriter();
@@ -297,7 +344,7 @@ public class Factory {
 }
 //todo: external conditions per template generation
 //todo: Do not override if overridden entity structure exactly the same
-//todo: Extensions for filters, types from CP and injection via yaml
+//todo: Extensions for filters, types from classpath and injection via yaml
 //todo: Gradle plugin/script to run¡
 //todo: examples tests?
 //todo: docs

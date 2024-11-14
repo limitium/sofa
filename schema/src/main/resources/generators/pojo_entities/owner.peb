@@ -1,0 +1,19 @@
+package {{ entity.namespace }};
+
+public class {{ entity.name }}{
+    {% for field in entity.fields | noRecordLists %}
+        public {{ field.type | javaType }} {{ field.name | toCamelCase }};
+    {% endfor %}
+
+    {% for field in entity.fields | noRecordLists%}
+
+        public void set{{ field.name | toCamelCase | capitalize }}({{ field.type | javaType }} val){
+            this.{{ field.name | toCamelCase }} = val;
+        }
+
+        public {{ field.type | javaType }} get{{ field.name | toCamelCase | capitalize }}(){
+            return this.{{ field.name | toCamelCase }};
+        }
+
+    {% endfor %}
+}

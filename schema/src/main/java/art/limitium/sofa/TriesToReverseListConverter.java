@@ -5,6 +5,12 @@ import art.limitium.sofa.schema.Owner;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+/**
+ * A converter that flattens a hierarchical structure of named entities into a list,
+ * preserving dependency order by traversing the tree depth-first.
+ *
+ * @param <E> Type parameter extending NamedEntity to allow working with different entity types
+ */
 
 public class TriesToReverseListConverter<E extends NamedEntity> {
     LinkedHashMap<String, E> flatted = new LinkedHashMap<>();

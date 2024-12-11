@@ -1,0 +1,23 @@
+{
+  "type": "enum",
+  "name": "OrderStatus",
+  "namespace": "com.example.order",
+  "values": [
+    {
+      "name": "NEW",
+      "alias": "NEW"
+    },
+    {
+      "name": "PROCESSING",
+      "alias": "PROCESSING"
+    },
+    {
+      "name": "SHIPPED",
+      "alias": "SHIPPED"
+    },
+    {
+      "name": "DELIVERED",
+      "alias": "DELIVERED"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "type": "child",
+  "name": "{{entity.name}}",
+  "namespace": "{{entity.namespace}}",
+  "fields": {
+    {% for field in entity.fields %}
+    "{{field.name}}": "{{field.type | javaType}}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  }
+}

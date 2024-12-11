@@ -76,6 +76,13 @@ public class CustomExtension extends AbstractExtension {
         
         // Add type conversion filters from all converters
         typeConverters.forEach(c -> filters.put(c.getName(), new TypeFilter(c)));
+
+        // Add test filters
+        filters.put("hasPrimary", new HasPrimaryFilter());
+        filters.put("primary", new PrimaryFilter());
+        filters.put("field", new FieldFilter());
+        filters.put("uncapitalize", new UncapitalizeFilter());
+    
         return filters;
     }
 
@@ -570,4 +577,79 @@ public class CustomExtension extends AbstractExtension {
             return input;
         }
     }
+
+
+    //Test filters
+    // Filter implementations
+public static class HasPrimaryFilter implements Filter {
+    
+    @Override
+    public List<String> getArgumentNames() {
+        return null; // This filter does not require any arguments
+    }
+
+    @Override
+    public Object apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) throws PebbleException {
+        if (input instanceof List<?> fields) {
+            return fields.stream()
+                .anyMatch(f -> f instanceof RecordEntity.Field field && field.isPrimary());
+        }
+        return false;
+    }
+}
+
+public static class PrimaryFilter implements Filter {
+    
+    @Override
+    public List<String> getArgumentNames() {
+        return null; // This filter does not require any arguments
+    }
+
+    @Override
+    public Object apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) throws PebbleException {
+        if (input instanceof List<?> fields) {
+            return fields.stream()
+                .filter(f -> f instanceof RecordEntity.Field field && field.isPrimary())
+                .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+}
+
+public static class FieldFilter implements Filter {
+    
+    @Override
+    public List<String> getArgumentNames() {
+        return List.of("name");
+    }
+
+    @Override
+    public Object apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) throws PebbleException {
+        if (input instanceof RecordEntity.Field field) {
+            String fieldName = (String) args.get("name");
+            return switch(fieldName) {
+                case "name" -> field.name();
+                case "type" -> field.type();
+                default -> null;
+            };
+        }
+        return null;
+    }
+}
+
+public static class UncapitalizeFilter implements Filter {
+    
+    @Override
+    public List<String> getArgumentNames() {
+        return null; // This filter does not require any arguments
+    }
+
+    @Override
+    public Object apply(Object input, Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) throws PebbleException {
+        if (input instanceof String str && !str.isEmpty()) {
+            return Character.toLowerCase(str.charAt(0)) + str.substring(1);
+        }
+        return input;
+}
+}
 }

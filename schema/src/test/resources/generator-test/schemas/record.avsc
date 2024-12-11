@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "Product",
+  "namespace": "com.example.product",
+  "fields": [
+    {
+      "name": "productId",
+      "type": "string",
+      "primary": true
+    },
+    {"name": "name", "type": "string"},
+    {"name": "description", "type": "string"},
+    {"name": "price", "type": "double"},
+    {"name": "inStock", "type": "boolean"}
+  ]
+}

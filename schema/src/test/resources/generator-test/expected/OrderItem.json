@@ -1,0 +1,12 @@
+{
+  "type": "dependent",
+  "name": "OrderItem",
+  "namespace": "com.example.order",
+  "fields": {
+    "productId": "String",
+    "quantity": "int",
+    "price": "double"
+  },
+  "owner": "Order",
+  "foreignKey": "orderId"
+}

@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "CartItem",
+  "namespace": "com.example.cart",
+  "fields": [
+    {
+      "name": "itemId",
+      "type": "string",
+      "primary": true
+    },
+    {"name": "cartId", "type": "string"},
+    {"name": "productId", "type": "string"},
+    {"name": "quantity", "type": "int"}
+  ]
+}

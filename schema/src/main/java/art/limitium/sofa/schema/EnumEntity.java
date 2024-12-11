@@ -20,13 +20,20 @@ public class EnumEntity extends Entity {
 
     @SuppressWarnings("unchecked")
     public List<String> getAliases() {
-        return (List<String>) getSchema().getObjectProp("symbol_aliases");
+        List<String> symbolAliases = (List<String>) getSchema().getObjectProp("symbol_aliases");
+        if (symbolAliases !=null && symbolAliases.size() != symbols.size()) {
+            throw new RuntimeException("Symbol aliases list size (" + symbolAliases.size() + 
+                                    ") does not match symbols list size (" + symbols.size() + 
+                                    ") for enum " + getFullname());
+        }
+        return symbolAliases;
     }
 
     public String getAlias(String symbol) {
         for (int i = 0; i < getSymbols().size(); i++) {
             if (symbol.equals(getSymbols().get(i))) {
-                return getAliases().get(i);
+                List<String> aliases = getAliases();
+                return aliases != null ? aliases.get(i) : symbol;
             }
         }
         throw new RuntimeException("Alias for " + symbol + " not found in enum " + getFullname());

@@ -1,0 +1,11 @@
+{
+  "type": "dependent",
+  "name": "CartItem",
+  "namespace": "com.example.cart",
+  "fields": {
+    "productId": "String",
+    "quantity": "int"
+  },
+  "owner": "Cart",
+  "foreignKey": "cartId"
+}

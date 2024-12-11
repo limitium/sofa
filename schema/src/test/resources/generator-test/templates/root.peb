@@ -1,0 +1,28 @@
+{
+  "type": "root",
+  "name": "{{entity.name}}",
+  "namespace": "{{entity.namespace}}",
+  {% if entity.fields | hasPrimary %}
+  "primaryKey": "{{entity.fields | primary | first | field(name)}}",
+  {% endif %}
+  "fields": {
+    {% for field in entity.fields %}
+    "{{field.name}}": {% if field.type.name == 'array' %}{
+      "type": "array",
+      "elementType": "{{field.type.elementType.record.name}}"
+    }{% elseif field.type.name == 'record' and not field.type.record.isRoot %}{
+      "type": "embedded",
+      "fields": {
+        {% for childField in field.type.record.fields %}
+        "{{childField.name}}": "{{childField.type | javaType}}"{% if not loop.last %},{% endif %}
+        {% endfor %}
+      }
+    }{% else %}"{{field.type | javaType}}"{% endif %}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  },
+  "dependencies": [
+    {% for dep in entity.dependencies %}
+    "{{dep.name}}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}

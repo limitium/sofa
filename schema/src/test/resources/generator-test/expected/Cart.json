@@ -1,0 +1,15 @@
+{
+  "type": "root",
+  "name": "Cart",
+  "namespace": "com.example.cart",
+  "fields": {
+    "cartId": "String",
+    "items": {
+      "type": "array",
+      "elementType": "CartItem"
+    }
+  },
+  "dependencies": [
+    "CartItem"
+  ]
+}

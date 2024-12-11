@@ -1,0 +1,9 @@
+{
+  "type": "child",
+  "name": "CustomerInfo",
+  "namespace": "com.example.order",
+  "fields": {
+    "name": "String",
+    "email": "String"
+  }
+}

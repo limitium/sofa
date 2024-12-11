@@ -1,0 +1,12 @@
+{
+  "type": "enum",
+  "name": "PaymentStatus",
+  "namespace": "com.example.payment",
+  "symbols": ["PENDING", "AUTHORIZED", "CAPTURED", "FAILED"],
+  "symbol_aliases": [
+    "Payment Pending",
+    "Payment Authorized",
+    "Payment Captured",
+    "Payment Failed"
+  ]
+}

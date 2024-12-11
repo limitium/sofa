@@ -1,0 +1,13 @@
+{
+  "type": "root",
+  "name": "Address",
+  "namespace": "com.example.common",
+  "fields": {
+    "street": "String",
+    "city": "String",
+    "country": "String",
+    "zipCode": "String"
+  },
+  "dependencies": [
+  ]
+}

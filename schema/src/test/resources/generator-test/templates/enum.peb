@@ -1,0 +1,13 @@
+{
+  "type": "enum",
+  "name": "{{entity.name}}",
+  "namespace": "{{entity.namespace}}",
+  "values": [
+    {% for symbol in entity.symbols %}
+    {
+      "name": "{{symbol}}",
+      "alias": "{{entity.alias(symbol)}}"
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "type": "record",
+  "name": "Order",
+  "namespace": "com.example.order",
+  "fields": [
+    {
+      "name": "orderId",
+      "type": "string",
+      "primary": true
+    },
+    {
+      "name": "customerInfo",
+      "type": {
+        "type": "record",
+        "name": "CustomerInfo",
+        "fields": [
+          {"name": "name", "type": "string"},
+          {"name": "email", "type": "string"}
+        ]
+      }
+    },
+    {
+      "name": "status",
+      "type": {
+        "type": "enum",
+        "name": "OrderStatus",
+        "symbols": ["NEW", "PROCESSING", "SHIPPED", "DELIVERED"]
+      }
+    },
+    {
+      "name": "items",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "OrderItem",
+          "fields": [
+            {"name": "productId", "type": "string"},
+            {"name": "quantity", "type": "int"},
+            {"name": "price", "type": "double"}
+          ]
+        }
+      }
+    }
+  ]
+}

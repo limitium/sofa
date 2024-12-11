@@ -83,6 +83,61 @@ public class {{name}} {
 }
 ```
 
+### Messages vs Entities
+
+The framework distinguishes between two key concepts:
+
+- **Messages**: Self-contained documents that include all related data inline. Messages are designed for data transfer and typically denormalized, making them ideal for event-driven systems and API payloads. When a message includes related data, it embeds the complete related object directly in the message structure.
+
+In this model:
+* One-to-one relationships are embedded directly in the parent record
+* One-to-many relationships are represented as arrays within the parent record
+* All related data is included in a single document
+* Ideal for event-driven systems and message passing architectures
+
+- **Entities**: Database-oriented structures that follow relational database normalization principles. Entities use references (typically through primary keys) to establish relationships between objects, rather than embedding the complete related data. This approach is optimized for data storage and maintains referential integrity through foreign key relationships.
+
+In this model:
+* One-to-one relationships are embedded in the parent entity
+* One-to-many relationships are extracted into separate entities with an owner_id reference
+* Relationships are maintained through foreign key references
+* Ideal for relational databases and systems requiring normalized data
+
+For example, consider an Order with LineItems:
+
+a message:
+```json
+{
+  "orderId": "123",
+  "items": [
+    { "productId": "A1", "quantity": 2 },
+    { "productId": "B2", "quantity": 1 }
+  ]
+}
+```
+
+the same as the entities
+```json
+Order {
+  id: "123"
+}
+
+OrderItem {
+  id: "item1",
+  order_id: "123",
+  product_id: "A1",
+  quantity: 2
+}
+OrderItem {
+  id: "item2",
+  order_id: "123",
+  product_id: "B2",
+  quantity: 1
+}
+```
+
+The schema generator can handle both approaches, choosing the appropriate template based on whether the record is marked as an owner (containing arrays) or dependent (owned by another record).
+
 ### Child Template (`child.peb`)
 Used for records that are neither root nor involved in one-to-many relationships. Child records are typically:
 - Value objects

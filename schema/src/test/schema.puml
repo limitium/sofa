@@ -1,0 +1,79 @@
+@startuml Test Schema
+
+package "com.example.order" {
+  class Order {
+    +String orderId <<PK>>
+    +CustomerInfo customerInfo
+    +OrderStatus status
+    +List<OrderItem> items
+  }
+
+  class CustomerInfo {
+    +String name
+    +String email
+  }
+
+  class OrderItem {
+    +String productId
+    +int quantity
+    +double price
+  }
+
+  enum OrderStatus {
+    NEW
+    PROCESSING
+    SHIPPED
+    DELIVERED
+  }
+}
+
+package "com.example.cart" {
+  class Cart {
+    +String cartId <<PK>>
+    +List<CartItem> items
+  }
+
+  class CartItem {
+    +String itemId <<PK>>
+    +String cartId <<FK>>
+    +String productId
+    +int quantity
+  }
+}
+
+package "com.example.common" {
+  class Address {
+    +String street
+    +String city
+    +String country
+    +String zipCode
+  }
+}
+
+package "com.example.payment" {
+  enum PaymentStatus {
+    PENDING ("Payment Pending")
+    AUTHORIZED ("Payment Authorized")
+    CAPTURED ("Payment Captured")
+    FAILED ("Payment Failed")
+  }
+}
+
+package "com.example.product" {
+  class Product {
+    +String productId <<PK>>
+    +String name
+    +String description
+    +double price
+    +boolean inStock
+  }
+}
+
+' Relationships
+Order *-- CustomerInfo : embeds
+Order *-- "0..*" OrderItem : contains
+Order --> OrderStatus : has
+Cart *-- "0..*" CartItem : owns
+CartItem --> Cart : belongs to
+
+@enduml

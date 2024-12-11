@@ -1,0 +1,14 @@
+{
+  "type": "root",
+  "name": "Product",
+  "namespace": "com.example.product",
+  "fields": {
+    "productId": "String",
+    "name": "String",
+    "description": "String",
+    "price": "double",
+    "inStock": "boolean"
+  },
+  "dependencies": [
+  ]
+}

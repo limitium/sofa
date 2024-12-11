@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "{{entity.name}}",
+  "namespace": "{{entity.namespace}}",
+  {% if entity.fields | hasPrimary %}
+  "primaryKey": "{{entity.fields | primary | first | field("name")}}",
+  {% endif %}
+  "fields": {
+    {% for field in entity.fields %}
+    "{{field.name}}": "{{field.type | javaType}}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  }
+}

@@ -192,11 +192,13 @@ public class Factory {
             Map<String, String> valuesContext = new HashMap<>();
             valuesContext.put("basePath", basePath);
 
-            factoryConfig.values.replaceAll((k, v) -> {
-                String newValue = evaluateTemplateToString(compileInlineTemplate(v), valuesContext);
-                valuesContext.put(k, newValue);
-                return newValue;
-            });
+            if (factoryConfig.values != null) {
+                factoryConfig.values.replaceAll((k, v) -> {
+                    String newValue = evaluateTemplateToString(compileInlineTemplate(v), valuesContext);
+                    valuesContext.put(k, newValue);
+                    return newValue;
+                });
+            }
 
             Map<String, PebbleTemplate> mainTemplates = mainTemplatesNames.stream()
                     .map(pebbleEngineForPath::getTemplate)

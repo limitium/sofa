@@ -1,0 +1,25 @@
+{
+  "type": "root",
+  "name": "Order",
+  "namespace": "com.example.order",
+  "fields": {
+    "orderId": "String",
+    "customerInfo": {
+      "type": "embedded",
+      "fields": {
+        "name": "String",
+        "email": "String"
+      }
+    },
+    "status": "com.example.order.OrderStatus",
+    "items": {
+      "type": "array",
+      "elementType": "OrderItem"
+    }
+  },
+  "dependencies": [
+    "OrderStatus",
+    "OrderItem",
+    "CustomerInfo"
+  ]
+}

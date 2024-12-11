@@ -1,0 +1,21 @@
+{
+  "type": "owner",
+  "name": "{{entity.name}}",
+  "namespace": "{{entity.namespace}}",
+  {% if entity.fields | hasPrimary %}
+  "primaryKey": "{{entity.fields | primary | first | field("name")}}",
+  {% endif %}
+  "fields": {
+    {% for field in entity.fields %}
+    "{{field.name}}": {% if field.type is ArrayType %}{
+      "type": "array",
+      "elementType": "{{field.type.elementType.record.name}}"
+    }{% else %}"{{field.type | javaType}}"{% endif %}{% if not loop.last %},{% endif %}
+    {% endfor %}
+  },
+  "ownedTypes": [
+    {% for field in entity.fields | recordLists %}
+    "{{field.type.elementType.record.name}}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}

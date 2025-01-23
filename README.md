@@ -22,7 +22,7 @@ Add the following dependency to your project:
 
 ```xml
 <dependency>
-    <groupId>art.limitium</groupId>
+    <groupId>art.limitium.sofa</groupId>
     <artifactId>sofa</artifactId>
     <version>1.0.0</version>
 </dependency>

@@ -65,7 +65,7 @@ public class {{ entity.name }}{
                     }
                 {% endif %}
                 {%- if field.type.name == 'enum' -%}
-                    {%- set fbmnum = field.type.enum | from("flatbuffers_messages") -%}
+                    {%- set fbmnum = field.type.enum | from("flatbuffers_entities") -%}
                     {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
@@ -130,6 +130,11 @@ public class {{ entity.name }}{
                     {%- if field.type.elementType.name == 'string' -%}
                         dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->fbDependent.{{ fbFieldName }}Vector().get(i)).toList();
                     {%- endif -%}
+                    {%- if field.type.elementType.name == 'enum' -%}
+                        {% set pojoEnum = field.type.elementType.enum | from("pojo_common") %}
+                        {%- set fbmnum = field.type.elementType.enum | from("flatbuffers_entities") -%}
+                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbRoot.{{ fbFieldName }}Length()).mapToObj(i->findEnum({{ pojoEnum.fullname }}.values(), {{ fbmnum.fullname }}.name(fbDependent.{{ fbFieldName }}Vector().get(i)))).toList();
+                    {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
                     dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}AsByteBuffer() != null ? fbDependent.{{ fbFieldName }}AsByteBuffer().array() : null;
@@ -164,6 +169,15 @@ public class {{ entity.name }}{
             }
         }
         return 0;
+    }
+
+    private static <E extends Enum<E>> Enum<E> findEnum(E[] enums, String name) {
+        for (E enumConstant : enums) {
+            if(enumConstant.name().equals(name)){
+                return enumConstant;
+            }
+        }
+        return null;
     }
 }
 

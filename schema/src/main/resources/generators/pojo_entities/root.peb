@@ -3,11 +3,11 @@ package {{ entity.namespace }};
 public class {{ entity.name }}{
     {% for field in entity.fields | noRecordLists %}
 {#        {% if field.type.name == 'record' %}#}
-{#        {% set record = field.type | from('pojo_common') %}#}
-{#        {% if field.type.withRecordLists %}#}
-{#            {% set %}#}
-{#        {% endif %}#}
-{#            public {{ record.type | javaType }} {{ field.name | toCamelCase }};#}
+{#            {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}#}
+{#            {% if not field.type.record.owner %}#}
+{#                {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}#}
+{#            {% endif %}#}
+{#            public {{ pojoRecord.fullname }} {{ field.name | toCamelCase }};#}
 {#        {% else %}#}
             public {{ field.type | javaType }} {{ field.name | toCamelCase }};
 {#        {% endif %}#}

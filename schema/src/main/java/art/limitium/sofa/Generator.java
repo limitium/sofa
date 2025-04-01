@@ -119,6 +119,9 @@ public class Generator {
                 }
             }
         }
+
+        schemas.put(name, mapByAvroName);
+
         Factory.logger.info("{} Entities created", entities.size());
 
         for (AvroEntity avroEntity : avroEntities) {
@@ -146,10 +149,7 @@ public class Generator {
         }
         Factory.logger.info("Relations created");
 
-
         List<String> files = toGenerate.stream().map(this::generateFor).toList();
-
-        schemas.put(name, mapByAvroName);
 
         String postCall = generatePostCall(files);
         if (postCall != null) {

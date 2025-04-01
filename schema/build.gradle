@@ -23,6 +23,7 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+    testImplementation 'org.instancio:instancio-junit:5.4.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 }
 
@@ -42,9 +43,6 @@ test {
 compileJava {
     options.compilerArgs += ['--enable-preview']
 }
-test {
-    jvmArgs += ['--enable-preview']
-}
 
 //sourceSets {
 //    main {
@@ -53,6 +51,27 @@ test {
 //        }
 //    }
 //}
+
+task generateArtifacts {
+    doLast {
+        // Specify the path to the def.yaml resource
+        def yamlPath = "${projectDir}/src/main/resources/def.yaml"
+
+        // Run the Factory class with the specified argument
+        javaexec {
+            main = 'art.limitium.sofa.Factory' // Replace with your actual main class
+            classpath = sourceSets.main.runtimeClasspath
+            args = [yamlPath]
+            jvmArgs = ['--enable-preview']
+        }
+    }
+}
+tasks.compileTestJava.dependsOn generateArtifacts
+sourceSets.test.java.srcDirs += "${buildDir}/generated/sources/java/main"
+
+test {
+    jvmArgs += ['--enable-preview']
+}
 
 tasks {
     jar {

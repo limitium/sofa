@@ -2,7 +2,15 @@ package {{ entity.namespace }};
 
 public class {{ entity.name }}{
     {% for field in entity.fields | noRecordLists %}
-        public {{ field.type | javaType }} {{ field.name | toCamelCase }};
+{#        {% if field.type.name == 'record' %}#}
+{#            {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}#}
+{#            {% if not field.type.record.owner %}#}
+{#                {%- set pojoRecord = pojoRecord | from("pojo_messages")  -%}#}
+{#            {% endif %}#}
+{#            public {{ pojoRecord.fullname }} {{ field.name | toCamelCase }};#}
+{#        {% else %}#}
+            public {{ field.type | javaType }} {{ field.name | toCamelCase }};
+{#        {% endif %}#}
     {% endfor %}
 
     {% for field in entity.fields | noRecordLists%}

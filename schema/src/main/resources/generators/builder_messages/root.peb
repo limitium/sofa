@@ -49,6 +49,9 @@ public class {{ entity.name }}{
             {%- if field.type.name == 'string' -%}
                 int {{ fbFieldName }} = root.{{ fieldName }} != null ? flatBufferBuilder.createString(root.{{ fieldName }}) : 0;
             {%- endif %}
+            {%- if field.type.name == 'bytes' -%}
+                int {{ fbFieldName }} = root.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(root.{{ fieldName }}) : 0;
+            {%- endif %}
 
         {% endfor %}
 
@@ -75,7 +78,7 @@ public class {{ entity.name }}{
                     {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, root.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(root.{{ fieldName }}) : null);
+                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
                 {%- endif -%}
             {%- endif -%}
 
@@ -124,7 +127,14 @@ public class {{ entity.name }}{
                     {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    root.{{ fieldName }} = fbRoot.{{ fbFieldName }}AsByteBuffer() != null ? fbRoot.{{ fbFieldName }}AsByteBuffer().array() : null;
+                    ByteBuffer buffer{{ fbFieldName }} = fbRoot.{{ fbFieldName }}AsByteBuffer();
+                    if (fbRoot.{{ fbFieldName }}AsByteBuffer() != null) {
+                        byte[] bytes{{ fbFieldName }} = new byte[buffer{{ fbFieldName }}.remaining()];
+                        buffer{{ fbFieldName }}.get(bytes{{ fbFieldName }});
+                        root.{{ fieldName }} = bytes{{ fbFieldName }};
+                    } else {
+                        root.{{ fieldName }} = null;
+                    }
                 {%- endif -%}
             {% endif %}
 
@@ -144,7 +154,7 @@ public class {{ entity.name }}{
         return 0;
     }
 
-    private static <E extends Enum<E>> Enum<E> findEnum(E[] enums, String name) {
+    private static <E extends Enum<E>> E findEnum(E[] enums, String name) {
         for (E enumConstant : enums) {
             if(enumConstant.name().equals(name)){
                 return enumConstant;

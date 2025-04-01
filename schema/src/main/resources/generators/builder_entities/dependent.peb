@@ -41,6 +41,9 @@ public class {{ entity.name }}{
              {%- if field.type.name == 'string' -%}
                 int {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
             {%- endif %}
+            {%- if field.type.name == 'bytes' -%}
+                int {{ fbFieldName }} = root.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(root.{{ fieldName }}) : 0;
+            {%- endif %}
 
         {% endfor %}
 
@@ -72,7 +75,7 @@ public class {{ entity.name }}{
                     {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, dependent.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(dependent.{{ fieldName }}) : null);
+                {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
                 {%- endif -%}
             {%- endif %}
 
@@ -105,7 +108,7 @@ public class {{ entity.name }}{
 
         {% for field in entity | flattenRecords('.') %}
             {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
-            {% if not pojoRecord.dependent %}
+            {% if not pojoRecord.dependent and not pojoRecord.owner %}
                 {%- set pojoRecord = pojoRecord | from("pojo_common")  -%}
             {% endif %}
             dependent.{{ field.name | toCamelCase }} = new {{ pojoRecord.fullname }}() ;
@@ -137,7 +140,14 @@ public class {{ entity.name }}{
                     {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}AsByteBuffer() != null ? fbDependent.{{ fbFieldName }}AsByteBuffer().array() : null;
+                    ByteBuffer buffer{{ fbFieldName }} = fbRoot.{{ fbFieldName }}AsByteBuffer();
+                    if (fbRoot.{{ fbFieldName }}AsByteBuffer() != null) {
+                        byte[] bytes{{ fbFieldName }} = new byte[buffer{{ fbFieldName }}.remaining()];
+                        buffer{{ fbFieldName }}.get(bytes{{ fbFieldName }});
+                        root.{{ fieldName }} = bytes{{ fbFieldName }};
+                    } else {
+                        root.{{ fieldName }} = null;
+                    }
                 {%- endif -%}
             {% endif %}
 
@@ -171,7 +181,7 @@ public class {{ entity.name }}{
         return 0;
     }
 
-    private static <E extends Enum<E>> Enum<E> findEnum(E[] enums, String name) {
+    private static <E extends Enum<E>> E findEnum(E[] enums, String name) {
         for (E enumConstant : enums) {
             if(enumConstant.name().equals(name)){
                 return enumConstant;

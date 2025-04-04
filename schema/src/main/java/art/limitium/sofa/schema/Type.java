@@ -63,7 +63,7 @@ public abstract class Type {
         });
     }
 
-    private final Map<String, Object> properties;
+    protected final Map<String, Object> properties;
 
     public Type(Map<String, Object> properties) {
         this.properties = properties;
@@ -342,6 +342,27 @@ public abstract class Type {
         @Override
         public int hashCode() {
             return Objects.hashCode(recordEntity);
+        }
+    }
+
+    /**
+     * For markup usage represents end of record entity
+     */
+    public static class RecordCloseType extends Type {
+        private final RecordType recordType;
+
+        public RecordCloseType(RecordType recordType) {
+            super(recordType.properties);
+            this.recordType = recordType;
+        }
+
+        @Override
+        public String getName() {
+            return "recordClose";
+        }
+
+        public RecordEntity getRecord() {
+            return recordType.recordEntity;
         }
     }
 

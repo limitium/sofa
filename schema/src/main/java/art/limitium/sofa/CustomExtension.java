@@ -65,6 +65,7 @@ public class CustomExtension extends AbstractExtension {
         
         // Structure flattening filters
         filters.put("flattenFields", new FlattenFields());
+        filters.put("flattenFieldsWithRecords", new FlattenFieldsWithRecords());
         filters.put("flattenRecords", new FlattenRecords());
         filters.put("flattenOwners", new FlattenOwners());
         
@@ -410,6 +411,56 @@ public class CustomExtension extends AbstractExtension {
                 String fieldName = fieldPrefix + field.name();
                 if (field.type() instanceof Type.RecordType recordType) {
                     flattenFields(recordType.getRecord(), fieldName, flattenFields, joiner);
+                } else {
+                    flattenFields.add(new RecordEntity.Field(fieldName, field.type()));
+                }
+            }
+        }
+
+        @Override
+        public List<String> getArgumentNames() {
+            return null;
+        }
+    }
+
+    /**
+     * Filter that flattens nested record fields into a single level with concatenated field names, but keep records for util usage
+     */
+    public static class FlattenFieldsWithRecords implements Filter {
+
+        @Override
+        public Object apply(Object o, Map<String, Object> args, PebbleTemplate pebbleTemplate, EvaluationContext evaluationContext, int i) throws PebbleException {
+            if (o instanceof RecordEntity record) {
+                String joiner = "_";
+                if (args.containsKey("0")) {
+                    joiner = String.valueOf(args.get("0"));
+                }
+                List<RecordEntity.Field> flattenFields = new ArrayList<>();
+                flattenFields(record, "", flattenFields, joiner);
+                return flattenFields;
+            }
+            return o;
+        }
+
+        /**
+         * Recursively flattens nested record fields
+         * @param record Record entity to flatten
+         * @param fieldPrefix Current field name prefix
+         * @param flattenFields List to collect flattened fields
+         * @param joiner String to join field name parts
+         */
+        private void flattenFields(RecordEntity record, String fieldPrefix, List<RecordEntity.Field> flattenFields, String joiner) {
+            if (!fieldPrefix.isEmpty()) {
+                fieldPrefix = fieldPrefix + joiner;
+            }
+
+            for (RecordEntity.Field field : record.getFields()) {
+                String fieldName = fieldPrefix + field.name();
+                if (field.type() instanceof Type.RecordType recordType) {
+                    flattenFields.add(new RecordEntity.Field(fieldName, field.type()));
+                    flattenFields(recordType.getRecord(), fieldName, flattenFields, joiner);
+                    Type.RecordCloseType type = new Type.RecordCloseType(recordType);
+                    flattenFields.add(new RecordEntity.Field(fieldName, type));
                 } else {
                     flattenFields.add(new RecordEntity.Field(fieldName, field.type()));
                 }

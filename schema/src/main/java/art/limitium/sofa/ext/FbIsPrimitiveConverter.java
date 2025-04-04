@@ -40,6 +40,7 @@ public class FbIsPrimitiveConverter implements TypeConverter {
 //            }
             case Type.RecordType recordType -> false;
             case Type.EnumType enumType -> false;
+            case Type.RecordCloseType recordCloseType -> false;
             case Type.MapType mapType -> throw new IllegalArgumentException("Unsupported Avro type: " + type.getName());
             case Type.NullType nullType -> throw new IllegalArgumentException("Unsupported Avro type: " + type.getName());
             case Type.UnionType unionType -> throw new IllegalArgumentException("Unsupported Avro type: " + type.getName());

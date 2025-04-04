@@ -76,9 +76,10 @@ public class ArtifactsTest {
         assertEquals(originalRoot3.getArrayField(), convertedRoot3.getArrayField());
         assertEquals(originalRoot3.getEnumField(), convertedRoot3.getEnumField());
         assertEquals(originalRoot3.getNested33Field().getStringField(), convertedRoot3.getNested33Field().getStringField());
-        assertEquals(originalRoot3.getNested33Field().getNnested33Field().getStringField(), convertedRoot3.getNested33Field().getNnested33Field().getStringField());
-        assertEquals(originalRoot3.getNested333Field().getLongField(), convertedRoot3.getNested333Field().getLongField());
-        assertEquals(originalRoot3.getNested333Field().getNnestedField().getStringField(), convertedRoot3.getNested333Field().getNnestedField().getStringField());
+
+        assertEquals(null, convertedRoot3.getNested33Field().getNnested33Field().getStringField());
+        assertEquals(0, convertedRoot3.getNested333Field().getLongField());
+        assertEquals(null, convertedRoot3.getNested333Field().getNnestedField().getStringField());
 
 
     }

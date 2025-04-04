@@ -10,7 +10,15 @@ import {{ fbm.fullname }};
 public class {{ entity.name }}{
 
     public static int buildFlatbufferFrom(FlatBufferBuilder flatBufferBuilder, {{ pojo.name }} dependent) {
+
         {% for field in entity | flattenFields('.') -%}
+            {%- set fieldName = field.name | toCamelCase -%}
+            {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
+            {%- if ["array", "string", "bytes"] contains field.type.name -%}
+                int {{ fbFieldName }} = 0;
+            {%- endif %}
+        {% endfor %}
+        {% for field in entity | flattenFieldsWithRecords('.') -%}
             {%- set fieldName = field.name | toCamelCase -%}
             {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
             {%- if field.type.name == 'array' -%}
@@ -21,7 +29,7 @@ public class {{ entity.name }}{
                         .mapToInt(v -> v)
                         .toArray();
 
-                    int {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
+                    {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
                 {%- if field.type.elementType.name == 'enum' -%}
                     {%- set fbmnum = field.type.elementType.enum | from("flatbuffers_messages") -%}
@@ -32,7 +40,7 @@ public class {{ entity.name }}{
                         {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}.get(i));
                     }
 
-                    int {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
+                    {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
                 {%- if field.type.elementType.name == 'record' -%}
 
@@ -42,22 +50,27 @@ public class {{ entity.name }}{
                         {{ fbFieldName }}Offsets[i]={{ field.type.elementType.record.fullname }}.buildFlatbufferFrom(flatBufferBuilder, dependent.{{ fieldName }}.get(i));
                     }
 
-                    int {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
+                    {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
             {%- endif %}
             {%- if field.type.name == 'string' -%}
-                int {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
+                {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
             {%- endif %}
             {%- if field.type.name == 'bytes' -%}
-                int {{ fbFieldName }} = root.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(root.{{ fieldName }}) : 0;
+                {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(dependent.{{ fieldName }}) : 0;
             {%- endif %}
-
+            {%- if field.type.name == 'record' -%}
+                if (dependent.{{ fieldName }} != null) {
+            {%- endif %}
+            {%- if field.type.name == 'recordClose' -%}
+                }
+            {%- endif %}
         {% endfor %}
 
 
         {{ fbm.name }}.start{{ fbm.name }}(flatBufferBuilder);
 
-        {% for field in entity | flattenFields('.') -%}
+        {% for field in entity | flattenFieldsWithRecords('.') -%}
             {%- set fieldName = field.name | toCamelCase -%}
             {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
 
@@ -79,6 +92,12 @@ public class {{ entity.name }}{
                 {%- if field.type.name == 'bytes' -%}
                     {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
                 {%- endif -%}
+                {%- if field.type.name == 'record' -%}
+                    if (dependent.{{ fieldName }} != null) {
+                {%- endif %}
+                {%- if field.type.name == 'recordClose' -%}
+                    }
+                {%- endif %}
             {%- endif %}
 
         {% endfor -%}

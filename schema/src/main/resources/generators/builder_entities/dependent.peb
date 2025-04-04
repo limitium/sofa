@@ -13,8 +13,15 @@ public class {{ entity.name }}{
         {% set owners = entity | flattenOwners %}
 
         FlatBufferBuilder flatBufferBuilder = new FlatBufferBuilder().forceDefaults(true);
-
         {% for field in entity | flattenFields('.') | noRecordLists -%}
+            {%- set fieldName = field.name | toCamelCase -%}
+            {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
+            {%- if ["array", "string", "bytes"] contains field.type.name -%}
+                int {{ fbFieldName }} = 0;
+            {%- endif %}
+        {% endfor %}
+
+        {% for field in entity | flattenFieldsWithRecords('.') | noRecordLists -%}
             {%- set fieldName = field.name | toCamelCase -%}
             {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
             {%- if field.type.name == 'array' -%}
@@ -24,7 +31,7 @@ public class {{ entity.name }}{
                         .mapToInt(v -> v)
                         .toArray();
 
-                    int {{ fbFieldName }} = flatBufferBuilder.createVectorOfTables({{ fbFieldName }}Offsets);
+                    {{ fbFieldName }} = flatBufferBuilder.createVectorOfTables({{ fbFieldName }}Offsets);
                 {%- endif -%}
                 {%- if field.type.elementType.name == 'enum' -%}
                     {%- set fbenum = field.type.elementType.enum | from("flatbuffers_entities") -%}
@@ -35,16 +42,21 @@ public class {{ entity.name }}{
                         {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbenum.fullname }}.names, dependent.{{ fieldName }}.get(i));
                     }
 
-                    int {{ fbFieldName }} = {{ fbe.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
+                    {{ fbFieldName }} = {{ fbe.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
             {%- endif %}
              {%- if field.type.name == 'string' -%}
-                int {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
+                {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
             {%- endif %}
             {%- if field.type.name == 'bytes' -%}
-                int {{ fbFieldName }} = root.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(root.{{ fieldName }}) : 0;
+                {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createByteVector(root.{{ fieldName }}) : 0;
             {%- endif %}
-
+            {%- if field.type.name == 'record' -%}
+                if (dependent.{{ fieldName }} != null) {
+            {%- endif %}
+            {%- if field.type.name == 'recordClose' -%}
+                }
+            {%- endif %}
         {% endfor %}
 
         {% if owners.size > 0 %}
@@ -55,7 +67,7 @@ public class {{ entity.name }}{
 
         {{ fbe.name }}.start{{ fbe.name }}(flatBufferBuilder);
 
-        {% for field in entity | flattenFields('.') -%}
+        {% for field in entity | flattenFieldsWithRecords('.') -%}
             {%- set fieldName = field.name | toCamelCase -%}
             {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
 
@@ -75,8 +87,14 @@ public class {{ entity.name }}{
                     {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
                 {%- endif -%}
+                {%- if field.type.name == 'record' -%}
+                    if (dependent.{{ fieldName }} != null) {
+                {%- endif %}
+                {%- if field.type.name == 'recordClose' -%}
+                    }
+                {%- endif %}
             {%- endif %}
 
         {% endfor -%}

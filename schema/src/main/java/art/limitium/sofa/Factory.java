@@ -105,88 +105,15 @@ public class Factory {
         List<AvroEntity> roots = schemaDefinition.findRoots();
         logger.info("Found roots {}: \r\n{}", roots.size(), String.join("\r\n", roots.stream().map(AvroEntity::getFullname).toList()));
 
-
         List<AvroEntity> scopeOfWork = convertTriesToUniqReverseRecords(schemaDefinition.roots);
         logger.info("Scope of work sequence {}: \r\n{}", scopeOfWork.size(), String.join("\r\n", scopeOfWork.stream().map(AvroEntity::getFullname).toList()));
-
 
         Map<String, Map<String, Entity>> schemas = new HashMap<>();
 
         List<Generator> generators = factoryConfig.generators.stream().map(generatorConfig -> {
-            String filePath = basePath + "/" + generatorConfig.path;
-            String classPath = "generators/" + generatorConfig.path;
-            if (generatorConfig.path.startsWith("/")) {
-                filePath = generatorConfig.path;
-            }
+            String generatorPath = generatorConfig.path;
 
-            //Configure for regular and class loader
-            PebbleEngine pebbleEngineForPath = createPebbleEngineForPath(filePath, classPath, schemas);
-
-
-            List<String> mainTemplatesNames = new ArrayList<>();
-            //regular external filepath
-            Path path = Path.of(filePath);
-            if (Files.exists(path)) {
-                logger.info("Generator loaded from regular folder: {}", path.toAbsolutePath());
-                try (Stream<Path> files = Files.list(path)) {
-                    mainTemplatesNames = files
-                            .map(Path::toFile)
-                            .filter(File::isFile)
-                            .filter(f -> f.getName().endsWith(".peb"))
-                            .map(f -> f.getName().replace(".peb", ""))
-                            .toList();
-                } catch (IOException e) {
-                    throw new RuntimeException("Unable to load templates for `" + generatorConfig.path + "` generator", e);
-                }
-
-            } else {
-                URL resource = Factory.class.getClassLoader().getResource(classPath);
-                if (resource == null) {
-                    throw new RuntimeException("Unable to load templates for `" + generatorConfig.path + "` generator");
-                }
-
-                if (!resource.getProtocol().equals("jar")) {
-                    //resources from current filebased classpath
-                    logger.info("Generator loaded from resource folder: {}", path.toAbsolutePath());
-                    try (Stream<Path> files = Files.list(Path.of(resource.getPath()))) {
-                        mainTemplatesNames = files
-                                .map(Path::toFile)
-                                .filter(File::isFile)
-                                .filter(f -> f.getName().endsWith(".peb"))
-                                .map(f -> f.getName().replace(".peb", ""))
-                                .toList();
-                    } catch (IOException e) {
-                        throw new RuntimeException("Unable to load templates for `" + generatorConfig.path + "` generator", e);
-                    }
-                } else {
-                    //inner jar resources
-                    logger.info("Generator loaded from jar: {}", path.toAbsolutePath());
-                    try {
-                        JarURLConnection jarConnection = (JarURLConnection) resource.openConnection();
-                        JarFile jarFile = jarConnection.getJarFile();
-                        Enumeration<JarEntry> entries = jarFile.entries();
-                        while (entries.hasMoreElements()) {
-                            JarEntry entry = entries.nextElement();
-                            String entryName = entry.getName();
-                            if (entryName.startsWith(classPath) && entryName.endsWith(".peb")) {
-                                // Extracting filename and extension
-                                String fullName = entry.getName();  // Get the full entry name (path)
-                                String fileName = fullName.substring(fullName.lastIndexOf('/') + 1);  // Extract just the file name
-
-                                // Handle cases where there might not be an extension
-                                int lastDotIndex = fileName.lastIndexOf('.');
-                                String nameWithoutExtension = (lastDotIndex != -1) ? fileName.substring(0, lastDotIndex) : fileName;
-
-                                // Process each entry
-                                mainTemplatesNames.add(nameWithoutExtension);
-
-                            }
-                        }
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
+            Map<String, PebbleTemplate> mainTemplates = loadMainTemplatesForGenerator(basePath, generatorPath, schemas);
 
             logger.info("Evaluate values");
             Map<String, String> valuesContext = new HashMap<>();
@@ -200,13 +127,8 @@ public class Factory {
                 });
             }
 
-            Map<String, PebbleTemplate> mainTemplates = mainTemplatesNames.stream()
-                    .map(pebbleEngineForPath::getTemplate)
-                    .collect(Collectors.toMap(PebbleTemplate::getName, identity()));
-            logger.info("Create generator `{}`, with templates: \r\n{}", generatorConfig.path, String.join("\r\n", mainTemplates.keySet().stream().toList()));
-
             return new Generator(
-                    generatorConfig.path,
+                    generatorPath,
                     mainTemplates,
                     new Generator.Templates(
                             compileInlineTemplate(generatorConfig.templates.namespace),
@@ -227,6 +149,91 @@ public class Factory {
             logger.info("Start generator `{}`", generator.getName());
             generator.generate(scopeOfWork);
         }
+
+        // Generate PlantUML diagram
+        generatePlantUMLDiagram(basePath, scopeOfWork);
+    }
+
+    private static Map<String, PebbleTemplate> loadMainTemplatesForGenerator(String basePath, String generatorPath, Map<String, Map<String, Entity>> schemas) {
+        String filePath = basePath + "/" + generatorPath;
+        String classPath = "generators/" + generatorPath;
+        if (generatorPath.startsWith("/")) {
+            filePath = generatorPath;
+        }
+
+        //Configure for regular and class loader
+        PebbleEngine pebbleEngineForPath = createPebbleEngineForPath(filePath, classPath, schemas);
+
+        List<String> mainTemplatesNames = new ArrayList<>();
+        //regular external filepath
+        Path path = Path.of(filePath);
+        if (Files.exists(path)) {
+            logger.info("Generator loaded from regular folder: {}", path.toAbsolutePath());
+            try (Stream<Path> files = Files.list(path)) {
+                mainTemplatesNames = files
+                        .map(Path::toFile)
+                        .filter(File::isFile)
+                        .filter(f -> f.getName().endsWith(".peb"))
+                        .map(f -> f.getName().replace(".peb", ""))
+                        .toList();
+            } catch (IOException e) {
+                throw new RuntimeException("Unable to load templates for `" + generatorPath + "` generator", e);
+            }
+
+        } else {
+            URL resource = Factory.class.getClassLoader().getResource(classPath);
+            if (resource == null) {
+                throw new RuntimeException("Unable to load templates for `" + generatorPath + "` generator");
+            }
+
+            if (!resource.getProtocol().equals("jar")) {
+                //resources from current filebased classpath
+                logger.info("Generator loaded from resource folder: {}", path.toAbsolutePath());
+                try (Stream<Path> files = Files.list(Path.of(resource.getPath()))) {
+                    mainTemplatesNames = files
+                            .map(Path::toFile)
+                            .filter(File::isFile)
+                            .filter(f -> f.getName().endsWith(".peb"))
+                            .map(f -> f.getName().replace(".peb", ""))
+                            .toList();
+                } catch (IOException e) {
+                    throw new RuntimeException("Unable to load templates for `" + generatorPath + "` generator", e);
+                }
+            } else {
+                //inner jar resources
+                logger.info("Generator loaded from jar: {}", path.toAbsolutePath());
+                try {
+                    JarURLConnection jarConnection = (JarURLConnection) resource.openConnection();
+                    JarFile jarFile = jarConnection.getJarFile();
+                    Enumeration<JarEntry> entries = jarFile.entries();
+                    while (entries.hasMoreElements()) {
+                        JarEntry entry = entries.nextElement();
+                        String entryName = entry.getName();
+                        if (entryName.startsWith(classPath) && entryName.endsWith(".peb")) {
+                            // Extracting filename and extension
+                            String fullName = entry.getName();  // Get the full entry name (path)
+                            String fileName = fullName.substring(fullName.lastIndexOf('/') + 1);  // Extract just the file name
+
+                            // Handle cases where there might not be an extension
+                            int lastDotIndex = fileName.lastIndexOf('.');
+                            String nameWithoutExtension = (lastDotIndex != -1) ? fileName.substring(0, lastDotIndex) : fileName;
+
+                            // Process each entry
+                            mainTemplatesNames.add(nameWithoutExtension);
+
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+
+        Map<String, PebbleTemplate> mainTemplates = mainTemplatesNames.stream()
+                .map(pebbleEngineForPath::getTemplate)
+                .collect(Collectors.toMap(PebbleTemplate::getName, identity()));
+        logger.info("Create generator `{}`, with templates: \r\n{}", generatorPath, String.join("\r\n", mainTemplates.keySet().stream().toList()));
+        return mainTemplates;
     }
 
     /**
@@ -342,6 +349,33 @@ public class Factory {
             throw new RuntimeException(e);
         }
         return stringWriter.toString();
+    }
+
+    /**
+     * Generates a PlantUML diagram from the Avro schema entities
+     * @param basePath Base directory path
+     * @param scopeOfWork List of entities to include in the diagram
+     */
+    private static void generatePlantUMLDiagram(String basePath, List<AvroEntity> scopeOfWork) {
+        try {
+
+            Map<String, PebbleTemplate> miscGeneratorTemplates = loadMainTemplatesForGenerator(basePath, "misc", new HashMap<>());
+            if(!miscGeneratorTemplates.containsKey("schema")){
+                throw new RuntimeException("Misc generator schema template not found");
+            }
+            PebbleTemplate template = miscGeneratorTemplates.get("schema");
+
+            Map<String, Object> context = new HashMap<>();
+            context.put("scopeOfWork", scopeOfWork);
+
+            String outputPath = basePath + "/schema.puml";
+            try (FileWriter writer = new FileWriter(outputPath)) {
+                template.evaluate(writer, context);
+                logger.info("Generated PlantUML diagram at {}", outputPath);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to generate PlantUML diagram", e);
+        }
     }
 }
 //todo: external conditions per template generation

@@ -1,0 +1,146 @@
+@startuml
+' Generated from Avro schema
+' Title: Complete Schema Diagram
+
+' Global settings
+skinparam backgroundColor #F8F8F8
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam defaultFontColor #333333
+
+' Class styles
+skinparam class {
+    BackgroundColor #FFFFFF
+    BorderColor #666666
+    ArrowColor #666666
+    FontColor #333333
+    StereotypeFontColor #666666
+    StereotypeFontSize 9
+    StereotypeFontStyle italic
+}
+
+skinparam classAttribute {
+    BackgroundColor #FFFFFF
+    FontColor #333333
+    FontSize 9
+}
+
+' Root class style
+skinparam class<<root>> {
+    BackgroundColor #E6FFE6
+    BorderColor #006600
+    ArrowColor #006600
+    FontColor #333333
+    StereotypeFontColor #006600
+}
+
+' Owner class style
+skinparam class<<owner>> {
+    BackgroundColor #E6F3FF
+    BorderColor #0066CC
+    ArrowColor #0066CC
+    FontColor #333333
+    StereotypeFontColor #0066CC
+}
+
+' Regular record style
+skinparam class<<record>> {
+    BackgroundColor #FFFFFF
+    BorderColor #666666
+    ArrowColor #666666
+    FontColor #333333
+    StereotypeFontColor #666666
+}
+
+' Enum styles
+skinparam enum {
+    BackgroundColor #F0F8FF
+    BorderColor #4682B4
+    ArrowColor #4682B4
+    FontColor #333333
+    StereotypeFontColor #4682B4
+}
+
+' Package styles
+skinparam package {
+    BackgroundColor #F5F5F5
+    BorderColor #CCCCCC
+    FontColor #666666
+}
+
+' Arrow styles
+skinparam arrow {
+    Color #666666
+    FontColor #666666
+    FontSize 9
+    Thickness 1
+}
+
+' Layout settings
+top to bottom direction
+scale 1.2
+skinparam linetype ortho
+skinparam nodesep 100
+skinparam ranksep 150
+
+' Main schema diagram
+{% for entity in scopeOfWork %}
+{% if entity.schema.getType().name() == 'record' %}
+{% set name = entity.getFullname() %}
+    class {{ name }}
+        {% if entity.isRoot %}
+        <<root>> {
+        {% elseif entity.isOwner() %}
+        <<owner>> {
+        {% else %}
+        <<record>> {
+        {% endif %}
+        {% for field in entity.schema.getFields() %}
+        {% if field.schema().getType().name() == 'record' %}
+        + {{ field.name() | toCamelCase }}: {{ field.schema().getFullName() }}
+        {% elseif field.schema().getType().name() == 'array' %}
+        + {{ field.name() | toCamelCase }}: List<{{ field.schema().getElementType().getFullName() }}>
+        {% elseif field.schema().getType().name() == 'map' %}
+        + {{ field.name() | toCamelCase }}: Map<String, {{ field.schema().getValueType().getFullName() }}>
+        {% elseif field.schema().getType().name() == 'enum' %}
+        + {{ field.name() | toCamelCase }}: {{ field.schema().getFullName() }}
+        {% else %}
+        + {{ field.name() | toCamelCase }}: {{ field.schema() | javaType }}
+        {% endif %}
+
+        {% endfor %}
+    }
+{% endif %}
+{% if entity.schema.getType().name() == 'enum' %}
+    enum {{ entity.getFullname() }} <<enum>> {
+        {% for symbol in entity.schema.getEnumSymbols() %}
+    {{ symbol }}
+
+    {% endfor %}
+    }
+{% endif %}
+{% endfor %}
+
+' Relationships
+{% for entity in scopeOfWork %}
+{% if entity.schema.getType().name() == 'record' %}
+{% for field in entity.schema.getFields() %}
+{% if field.schema().getType().name() == 'record' %}
+{{ entity.getFullname() }} --> {{ field.schema().getFullName() }} : contains
+{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+' Ownership relationships
+{% for entity in scopeOfWork %}
+{% if entity.schema.getType().name() == 'record' %}
+{% for owner in entity.getOwners() %}
+{{ owner.getFullname() }} "1" --* "many" {{ entity.getFullname() }} : owns
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+
+@enduml 

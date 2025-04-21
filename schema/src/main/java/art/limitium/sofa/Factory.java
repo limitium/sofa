@@ -149,9 +149,6 @@ public class Factory {
             logger.info("Start generator `{}`", generator.getName());
             generator.generate(scopeOfWork);
         }
-
-        // Generate PlantUML diagram
-        generatePlantUMLDiagram(basePath, scopeOfWork);
     }
 
     private static Map<String, PebbleTemplate> loadMainTemplatesForGenerator(String basePath, String generatorPath, Map<String, Map<String, Entity>> schemas) {
@@ -349,33 +346,6 @@ public class Factory {
             throw new RuntimeException(e);
         }
         return stringWriter.toString();
-    }
-
-    /**
-     * Generates a PlantUML diagram from the Avro schema entities
-     * @param basePath Base directory path
-     * @param scopeOfWork List of entities to include in the diagram
-     */
-    private static void generatePlantUMLDiagram(String basePath, List<AvroEntity> scopeOfWork) {
-        try {
-
-            Map<String, PebbleTemplate> miscGeneratorTemplates = loadMainTemplatesForGenerator(basePath, "misc", new HashMap<>());
-            if(!miscGeneratorTemplates.containsKey("schema")){
-                throw new RuntimeException("Misc generator schema template not found");
-            }
-            PebbleTemplate template = miscGeneratorTemplates.get("schema");
-
-            Map<String, Object> context = new HashMap<>();
-            context.put("scopeOfWork", scopeOfWork);
-
-            String outputPath = basePath + "/schema.puml";
-            try (FileWriter writer = new FileWriter(outputPath)) {
-                template.evaluate(writer, context);
-                logger.info("Generated PlantUML diagram at {}", outputPath);
-            }
-        } catch (Exception e) {
-            logger.error("Failed to generate PlantUML diagram", e);
-        }
     }
 }
 //todo: external conditions per template generation

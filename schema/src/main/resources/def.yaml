@@ -146,3 +146,12 @@ generators:
       fullname: "{{ namespace | toSnakeCase }}_{{ name }}"
       filename: "1.0-create-table-{{ fullname | upper }}.xml"
       folder: "{{outputPath}}/liquibase"
+  - path: "puml"
+    templates:
+      filename: "{{ fullname }}.puml"
+      folder: "{{outputPath}}/puml"
+    postCall: >-
+      /usr/bin/curl -fsS -X POST http://localhost:8081/svg
+      -H 'Content-Type: text/plain; charset=utf-8'
+      --data-binary @{{outputPath}}/puml/schema.puml
+      -o {{outputPath}}/puml/schema.svg 2>/dev/null

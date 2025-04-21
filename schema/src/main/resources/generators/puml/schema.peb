@@ -78,14 +78,16 @@ skinparam arrow {
 }
 
 ' Layout settings
-top to bottom direction
-scale 1.2
+left to right direction
+scale 0.8
 skinparam linetype ortho
-skinparam nodesep 100
-skinparam ranksep 150
+skinparam nodesep 50
+skinparam ranksep 100
+skinparam wrapWidth 200
+skinparam maxMessageSize 100
 
 ' Main schema diagram
-{% for entity in scopeOfWork %}
+{% for entity in entities %}
 {% if entity.schema.getType().name() == 'record' %}
 {% set name = entity.getFullname() %}
     class {{ name }}
@@ -123,7 +125,7 @@ skinparam ranksep 150
 {% endfor %}
 
 ' Relationships
-{% for entity in scopeOfWork %}
+{% for entity in entities %}
 {% if entity.schema.getType().name() == 'record' %}
 {% for field in entity.schema.getFields() %}
 {% if field.schema().getType().name() == 'record' %}
@@ -134,7 +136,7 @@ skinparam ranksep 150
 {% endfor %}
 
 ' Ownership relationships
-{% for entity in scopeOfWork %}
+{% for entity in entities %}
 {% if entity.schema.getType().name() == 'record' %}
 {% for owner in entity.getOwners() %}
 {{ owner.getFullname() }} "1" --* "many" {{ entity.getFullname() }} : owns

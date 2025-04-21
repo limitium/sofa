@@ -77,6 +77,10 @@ public class Generator {
         Map<String, Entity> mapByAvroName = new HashMap<>();
         List<Entity> toGenerate = new ArrayList<>();
 
+        if(mainTemplates.containsKey("schema")){
+            String fileName = evaluateFolderFileNameCreateFolder("", Collections.singletonMap("fullname", "schema"), "", Collections.singletonMap("fullname", "schema"));
+            evaluateTemplateToFile(mainTemplates.get("schema"), extendValuesContext(Map.of("entities", avroEntities)), fileName);
+        }
 
         for (AvroEntity avroEntity : avroEntities) {
             boolean shouldBeGenerated = shouldBeGenerated(avroEntity);
@@ -212,7 +216,57 @@ public class Generator {
         context.put("name", entity.getName());
         context.put("entity", entity);
 
-        String generatedFolder = generateFolder(entity);
+        String folderName = entity.getNamespace();
+        Map<String, Object> folderContext = Collections.singletonMap("entity", entity);
+        String fileName = entity.getName();
+        Map<String, Object> filenameContext = Map.of("namespace", entity.getNamespace(), "name", entity.getName(), "fullname", entity.getFullname(), "schema", entity.getSchema(), "entity", entity);
+
+        String fullFileName = evaluateFolderFileNameCreateFolder(folderName, folderContext, fileName, filenameContext);
+
+        PebbleTemplate template;
+        if (entity instanceof EnumEntity enumEntity) {
+            Factory.logger.info("Generate enum {} into {}", enumEntity.getFullname(), fullFileName);
+            context.put("symbols", enumEntity.getSymbols());
+            template = mainTemplates.get("enum");
+
+        } else {
+            RecordEntity recordEntity = (RecordEntity) entity;
+            if (mainTemplates.containsKey("root") && recordEntity.isRoot()) {
+                Factory.logger.info("Generate root {} into {}", recordEntity.getFullname(), fullFileName);
+                template = mainTemplates.get("root");
+            } else if (mainTemplates.containsKey("owner") && recordEntity.isOwner()) {
+                Factory.logger.info("Generate owner {} into {}", recordEntity.getFullname(), fullFileName);
+                template = mainTemplates.get("owner");
+            } else if (mainTemplates.containsKey("dependent") && !recordEntity.getOwners().isEmpty()) {
+                Factory.logger.info("Generate dependent {} into {}", recordEntity.getFullname(), fullFileName);
+                template = mainTemplates.get("dependent");
+            } else if (mainTemplates.containsKey("child") && !recordEntity.isRoot()) {
+                Factory.logger.info("Generate child {} into {}", recordEntity.getFullname(), fullFileName);
+                template = mainTemplates.get("child");
+            } else {
+                Factory.logger.info("Generate record {} into {}", recordEntity.getFullname(), fullFileName);
+                template = mainTemplates.get("record");
+            }
+        }
+        if (fullFileName.contains("/")) {
+            String[] pathParts = fullFileName.split("/");
+            String folderPath = String.join("/", Arrays.copyOf(pathParts, pathParts.length - 1));
+            if (!folderPath.startsWith("/")) {
+                folderPath = basePath + "/" + folderPath;
+            }
+
+            try {
+                Files.createDirectories(Paths.get(folderPath));
+            } catch (IOException e) {
+                throw new RuntimeException("Unable to create folder " + folder, e);
+            }
+        }
+        evaluateTemplateToFile(template, extendValuesContext(context), fullFileName);
+        return fullFileName;
+    }
+
+    private String evaluateFolderFileNameCreateFolder(String folderName, Map<String, Object> folderContext, String fileName, Map<String, Object> filenameContext) {
+        String generatedFolder = generateFolder(folderName, folderContext);
         folder = basePath + "/" + generatedFolder;
         if (generatedFolder.startsWith("/")) {
             folder = generatedFolder;
@@ -226,47 +280,7 @@ public class Generator {
             throw new RuntimeException("Unable to create folder " + folder, e);
         }
 
-        String fileName = folder + generateFilename(entity);
-        PebbleTemplate template;
-        if (entity instanceof EnumEntity enumEntity) {
-            Factory.logger.info("Generate enum {} into {}", enumEntity.getFullname(), fileName);
-            context.put("symbols", enumEntity.getSymbols());
-            template = mainTemplates.get("enum");
-
-        } else {
-            RecordEntity recordEntity = (RecordEntity) entity;
-            if (mainTemplates.containsKey("root") && recordEntity.isRoot()) {
-                Factory.logger.info("Generate root {} into {}", recordEntity.getFullname(), fileName);
-                template = mainTemplates.get("root");
-            } else if (mainTemplates.containsKey("owner") && recordEntity.isOwner()) {
-                Factory.logger.info("Generate owner {} into {}", recordEntity.getFullname(), fileName);
-                template = mainTemplates.get("owner");
-            } else if (mainTemplates.containsKey("dependent") && !recordEntity.getOwners().isEmpty()) {
-                Factory.logger.info("Generate dependent {} into {}", recordEntity.getFullname(), fileName);
-                template = mainTemplates.get("dependent");
-            } else if (mainTemplates.containsKey("child") && !recordEntity.isRoot()) {
-                Factory.logger.info("Generate child {} into {}", recordEntity.getFullname(), fileName);
-                template = mainTemplates.get("child");
-            } else {
-                Factory.logger.info("Generate record {} into {}", recordEntity.getFullname(), fileName);
-                template = mainTemplates.get("record");
-            }
-        }
-        if (fileName.contains("/")) {
-            String[] pathParts = fileName.split("/");
-            String folderPath = String.join("/", Arrays.copyOf(pathParts, pathParts.length - 1));
-            if (!folderPath.startsWith("/")) {
-                folderPath = basePath + "/" + folderPath;
-            }
-
-            try {
-                Files.createDirectories(Paths.get(folderPath));
-            } catch (IOException e) {
-                throw new RuntimeException("Unable to create folder " + folder, e);
-            }
-        }
-        evaluateTemplateToFile(template, extendValuesContext(context), fileName);
-        return fileName;
+        return folder + generateFilename(fileName, filenameContext);
     }
 
     /**
@@ -316,13 +330,13 @@ public class Generator {
     /**
      * Generates a filename for an entity using the filename template if available
      *
-     * @param entity The entity to generate a filename for
+     * @param filename The entity to generate a filename for
+     * @param context
      * @return The generated filename
      */
-    private String generateFilename(Entity entity) {
-        String filename = entity.getName();
+    private String generateFilename(String filename, Map<String, Object> context) {
         if (templates.filename != null) {
-            filename = Factory.evaluateTemplateToString(templates.filename, extendValuesContext(Map.of("namespace", entity.getNamespace(), "name", entity.getName(), "fullname", entity.getFullname(), "schema", entity.getSchema(), "entity", entity)));
+            filename = Factory.evaluateTemplateToString(templates.filename, extendValuesContext(context));
         }
         return filename;
     }
@@ -330,13 +344,13 @@ public class Generator {
     /**
      * Generates a folder path for an entity using the folder template if available
      *
-     * @param entity The entity to generate a folder path for
+     * @param folder The entity to generate a folder path for
+     * @param context
      * @return The generated folder path
      */
-    private String generateFolder(Entity entity) {
-        String folder = entity.getNamespace();
+    private String generateFolder(String folder, Map<String, Object> context) {
         if (templates.folder != null) {
-            folder = Factory.evaluateTemplateToString(templates.folder, extendValuesContext(Collections.singletonMap("entity", entity)));
+            folder = Factory.evaluateTemplateToString(templates.folder, extendValuesContext(context));
         }
         return folder;
     }

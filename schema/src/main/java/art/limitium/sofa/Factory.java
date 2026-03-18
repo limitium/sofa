@@ -282,19 +282,74 @@ public class Factory {
     }
 
     /**
-     * Loads and parses Avro schemas from files
+     * Loads and parses Avro schemas from files and classpath resources.
+     * <p>
+     * Supported schema path formats:
+     * <ul>
+     *     <li>{@code avro/path/Schema.avsc} - resolved relative to {@code basePath}; if the file
+     *     does not exist, a classpath resource {@code sofa/avro/path/Schema.avsc} is attempted.</li>
+     *     <li>{@code groupId:artifactId:avro/path/Schema.avsc} - resolved only as a classpath
+     *     resource {@code sofa/avro/path/Schema.avsc}. The {@code groupId:artifactId} part is used
+     *     for logging and error messages only.</li>
+     * </ul>
+     * Schemas are loaded strictly in the order they are defined in the {@code schemas} list.
+     *
      * @param basePath Base directory path
-     * @param schemas List of schema file paths
+     * @param schemas  List of schema path specifications
      * @return SchemaDefinition containing parsed schemas
      */
     private static SchemaDefinition loadSchema(String basePath, List<String> schemas) {
         SchemaDefinition schemaDefinition = new SchemaDefinition();
         Parser parser = new Parser();
-        for (String schemaPath : schemas) {
-            String filePath = basePath + "/" + schemaPath;
+        ClassLoader classLoader = Factory.class.getClassLoader();
+
+        for (String schemaSpec : schemas) {
+            long colonCount = schemaSpec.chars().filter(ch -> ch == ':').count();
             try {
-                logger.info("Parsing schema from {}", filePath);
-                Schema schema = parser.parse(new File(filePath));
+                Schema schema;
+
+                if (colonCount == 2) {
+                    // Format: groupId:artifactId:path/To/Schema.avsc
+                    String[] parts = schemaSpec.split(":", 3);
+                    String group = parts[0];
+                    String artifact = parts[1];
+                    String resourceRelativePath = parts[2];
+
+                    String ga = group + ":" + artifact;
+                    String resourcePath = "sofa/" + resourceRelativePath;
+
+                    logger.info("Parsing schema `{}` from classpath resource `{}` (expected in library `{}`)",
+                            schemaSpec, resourcePath, ga);
+
+                    try (InputStream is = classLoader.getResourceAsStream(resourcePath)) {
+                        if (is == null) {
+                            throw new RuntimeException("Schema `" + schemaSpec + "` not found as classpath resource `" +
+                                    resourcePath + "`; ensure dependency `" + ga + "` is on the generator classpath");
+                        }
+                        schema = parser.parse(is);
+                    }
+                } else {
+                    // Local schema: relative path resolved against basePath, with optional classpath fallback
+                    String filePath = basePath + "/" + schemaSpec;
+                    File file = new File(filePath);
+
+                    if (file.exists()) {
+                        logger.info("Parsing schema from file {}", file.getAbsolutePath());
+                        schema = parser.parse(file);
+                    } else {
+                        String resourcePath = "sofa/" + schemaSpec;
+                        logger.info("File `{}` not found, trying to load schema from classpath resource `{}`",
+                                file.getAbsolutePath(), resourcePath);
+                        try (InputStream is = classLoader.getResourceAsStream(resourcePath)) {
+                            if (is == null) {
+                                throw new RuntimeException("Schema `" + schemaSpec + "` not found as file `" +
+                                        file.getAbsolutePath() + "` or classpath resource `" + resourcePath + "`");
+                            }
+                            schema = parser.parse(is);
+                        }
+                    }
+                }
+
                 logger.debug("Schema parsed {}", schema);
                 if (schema.isUnion()) {
                     schema.getTypes().forEach(schemaDefinition::addRecord);
@@ -302,9 +357,8 @@ public class Factory {
                     schemaDefinition.addRecord(schema);
                 }
             } catch (SchemaParseException | IOException e) {
-                throw new RuntimeException("Unable to parse file `" + filePath + "`", e);
+                throw new RuntimeException("Unable to parse schema `" + schemaSpec + "`", e);
             }
-
         }
 
         return schemaDefinition;

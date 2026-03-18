@@ -48,6 +48,27 @@ class GeneratorTest {
                 "Product.json"
         );
     }
+
+    @Test
+    void shouldLoadSchemasFromExternalLibraryAndLocal() throws IOException {
+        // Given
+        String configPath = copyTestResources("test-config-external.yaml", "schemas", "templates");
+
+        // When
+        Factory.main(new String[]{configPath});
+
+        // Then
+        verifyGeneratedFiles(
+                "Address.json",
+                "Cart.json",
+                "CartItem.json",
+                "CustomerInfo.json",
+                "Order.json",
+                "OrderItem.json",
+                "OrderStatus.json",
+                "Product.json"
+        );
+    }
     
     private String copyTestResources(String configFile, String... directories) throws IOException {
         // Copy config file

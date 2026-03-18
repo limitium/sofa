@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "ExternalRecord",
+  "namespace": "com.example.external",
+  "fields": [
+    {
+      "name": "id",
+      "type": "string"
+    }
+  ]
+}
+

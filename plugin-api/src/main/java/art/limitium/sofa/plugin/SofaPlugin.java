@@ -7,14 +7,13 @@ import java.util.Map;
 /**
  * Generator plugin extension point.
  *
- * <p>Plugins are discovered via Java SPI (ServiceLoader). Provide an implementation and register it
- * by adding a file:
+ * <p>Plugins are configured explicitly in def.yaml via fully-qualified class names:
  *
  * <pre>
- *   META-INF/services/art.limitium.sofa.plugin.SofaPlugin
+ * plugins:
+ *   - "com.mycompany.sofa.MyPlugin"
+ *   - "com.other.Plugin"
  * </pre>
- *
- * with the fully-qualified implementation class name(s), one per line.
  */
 public interface SofaPlugin {
     /**

@@ -289,8 +289,16 @@ Plugins are ordinary jars on the generator runtime classpath. They can contribut
 
 ### How discovery works
 
-Plugins are discovered automatically via Java SPI (`ServiceLoader`) for the interface
-`art.limitium.sofa.plugin.SofaPlugin` (published as `sofa-plugin-api`).
+Plugins are loaded from `plugins` in def.yaml using fully-qualified class names:
+
+```yaml
+plugins:
+  - "com.mycompany.sofa.MyPlugin"
+  - "com.other.Plugin"
+```
+
+Each class must implement `art.limitium.sofa.plugin.SofaPlugin` (published as
+`sofa-plugin-api`) and have a public no-arg constructor.
 
 ### How to add a plugin jar
 
@@ -312,9 +320,6 @@ Your plugin module should:
   - `SofaPlugin.SofaFilter` implementations (generator will proxy them into Pebble filters)
   - `SofaPlugin.SofaTypeConverter<?>` implementations operating on `art.limitium.sofa.plugin.SofaType`
     (generator will adapt internal schema `Type` into `SofaType` and proxy into SOFA `TypeConverter`)
-- implement `art.limitium.sofa.plugin.SofaPlugin`
-- register via SPI by adding `META-INF/services/art.limitium.sofa.plugin.SofaPlugin`
-  containing your implementation class name (one per line).
 
 ## Example
 

@@ -81,6 +81,10 @@ public abstract class Type {
         return properties.get(prop);
     }
 
+    public Map<String, Object> getProperties() {
+        return Map.copyOf(properties);
+    }
+
     /**
      * Creates a Type instance from an Avro schema
      */

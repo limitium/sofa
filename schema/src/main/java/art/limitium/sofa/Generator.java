@@ -25,6 +25,7 @@ public class Generator {
     private final Map<String, Map<String, Entity>> schemas;
     private final Map<String, String> valuesContext;
     private final String basePath;
+    private final TemplateEvaluator templateEvaluator;
     private String folder;
 
     /**
@@ -39,7 +40,16 @@ public class Generator {
      * @param schemas Map of schema name to entities
      * @param valuesContext Context values for template evaluation
      */
-    public Generator(String name, Map<String, PebbleTemplate> mainTemplates, Templates templates, String overrides, FiltersConfig filters, PebbleTemplate postCall, Map<String, Map<String, Entity>> schemas, Map<String, String> valuesContext) {
+    public Generator(
+            String name,
+            Map<String, PebbleTemplate> mainTemplates,
+            Templates templates,
+            String overrides,
+            FiltersConfig filters,
+            PebbleTemplate postCall,
+            Map<String, Map<String, Entity>> schemas,
+            Map<String, String> valuesContext,
+            TemplateEvaluator templateEvaluator) {
         this.name = name;
         this.mainTemplates = mainTemplates;
         this.templates = templates;
@@ -49,6 +59,7 @@ public class Generator {
         this.schemas = schemas;
         this.valuesContext = valuesContext;
         this.basePath = valuesContext.get("basePath");
+        this.templateEvaluator = templateEvaluator;
     }
 
     /**
@@ -292,7 +303,7 @@ public class Generator {
     private String generateName(Schema schema) {
         String name = schema.getName();
         if (templates.name != null) {
-            name = Factory.evaluateTemplateToString(templates.name, extendValuesContext(Collections.singletonMap("schema", schema)));
+            name = templateEvaluator.evaluateToString(templates.name, extendValuesContext(Collections.singletonMap("schema", schema)));
         }
         return name;
     }
@@ -306,7 +317,8 @@ public class Generator {
     private String generateNamespace(Schema schema) {
         String namespace = schema.getNamespace();
         if (templates.namespace != null) {
-            namespace = Factory.evaluateTemplateToString(templates.namespace, extendValuesContext(Collections.singletonMap("schema", schema)));
+            namespace = templateEvaluator.evaluateToString(
+                    templates.namespace, extendValuesContext(Collections.singletonMap("schema", schema)));
         }
         return namespace;
     }
@@ -322,7 +334,9 @@ public class Generator {
     private String generateFullname(String namespace, String name, Schema schema) {
         String fullname = namespace + "." + name;
         if (templates.namespace != null) {
-            fullname = Factory.evaluateTemplateToString(templates.fullname, extendValuesContext(Map.of("namespace", namespace, "name", name, "schema", schema)));
+            fullname = templateEvaluator.evaluateToString(
+                    templates.fullname,
+                    extendValuesContext(Map.of("namespace", namespace, "name", name, "schema", schema)));
         }
         return fullname;
     }
@@ -336,7 +350,7 @@ public class Generator {
      */
     private String generateFilename(String filename, Map<String, Object> context) {
         if (templates.filename != null) {
-            filename = Factory.evaluateTemplateToString(templates.filename, extendValuesContext(context));
+            filename = templateEvaluator.evaluateToString(templates.filename, extendValuesContext(context));
         }
         return filename;
     }
@@ -350,7 +364,7 @@ public class Generator {
      */
     private String generateFolder(String folder, Map<String, Object> context) {
         if (templates.folder != null) {
-            folder = Factory.evaluateTemplateToString(templates.folder, extendValuesContext(context));
+            folder = templateEvaluator.evaluateToString(templates.folder, extendValuesContext(context));
         }
         return folder;
     }
@@ -363,7 +377,7 @@ public class Generator {
      */
     private String generatePostCall(List<String> files) {
         if (this.postCall != null) {
-            return Factory.evaluateTemplateToString(this.postCall, extendValuesContext(Map.of("files", files)));
+            return templateEvaluator.evaluateToString(this.postCall, extendValuesContext(Map.of("files", files)));
         }
         return null;
     }

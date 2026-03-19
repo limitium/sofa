@@ -1,0 +1,15 @@
+schemas:
+  - schemas/simple.avsc
+
+plugins:
+  - "art.limitium.sofa.TestSofaPlugin"
+
+generators:
+  - path: templates
+    templates:
+      namespace: "{{schema.namespace}}"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated-plugin"
+      filename: "{{name}}-plugin.json"
+

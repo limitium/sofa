@@ -15,25 +15,27 @@ import java.util.stream.Collectors;
  * Custom extension for Pebble template engine that provides additional filters and functions.
  * This extension adds type conversion capabilities and schema-aware operations.
  */
-/**
- * Custom extension for Pebble template engine that provides additional filters and functions.
- * This extension adds type conversion capabilities and schema-aware operations.
- */
 public class CustomExtension extends AbstractExtension {
     /** List of type converters used for converting between different type systems */
     private final List<TypeConverter> typeConverters;
     
     /** Map of schema names to their entity definitions */
     private final Map<String, Map<String, Entity>> schemas;
+    /** Plugin-provided filters to merge in */
+    private final Map<String, Filter> pluginFilters;
 
     /**
      * Creates a new CustomExtension with the specified type converters and schemas
      * @param typeConverters List of type converters to use
      * @param schemas Map of schema names to their entity definitions
      */
-    public CustomExtension(List<TypeConverter> typeConverters, Map<String, Map<String, Entity>> schemas) {
+    public CustomExtension(
+            List<TypeConverter> typeConverters,
+            Map<String, Map<String, Entity>> schemas,
+            Map<String, Filter> pluginFilters) {
         this.typeConverters = typeConverters;
         this.schemas = schemas;
+        this.pluginFilters = pluginFilters != null ? pluginFilters : Map.of();
     }
 
     /**
@@ -75,14 +77,18 @@ public class CustomExtension extends AbstractExtension {
         filters.put("noRecordLists", new NoRecordListFilter());
         filters.put("recordLists", new RecordListFilter());
         
-        // Add type conversion filters from all converters
-        typeConverters.forEach(c -> filters.put(c.getName(), new TypeFilter(c)));
-
         // Add test filters
         filters.put("hasPrimary", new HasPrimaryFilter());
         filters.put("primary", new PrimaryFilter());
         filters.put("field", new FieldFilter());
         filters.put("uncapitalize", new UncapitalizeFilter());
+
+        // Add type conversion filters from all converters (core first, plugins after).
+        // This is intentionally late so converters can override default filters when names collide.
+        typeConverters.forEach(c -> filters.put(c.getName(), new TypeFilter(c)));
+
+        // Add plugin filters (plugin wins on name collision)
+        filters.putAll(pluginFilters);
     
         return filters;
     }

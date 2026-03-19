@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "Simple",
+  "namespace": "plugin.test",
+  "fields": [
+    { "name": "value", "type": "int" }
+  ]
+}
+

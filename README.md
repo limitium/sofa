@@ -280,6 +280,42 @@ SOFA provides various template filters to help with code generation:
 - Structure flattening: `flattenFields`, `flattenRecords`, `flattenOwners`
 - Entity filtering: `enums`, `recordLists`, `noRecordLists`
 
+## Plugin system
+
+Plugins are ordinary jars on the generator runtime classpath. They can contribute:
+
+- **Pebble filters** (merged into `CustomExtension#getFilters()`)
+- **Type converters** (appended to the converter list used by `Factory`)
+
+### How discovery works
+
+Plugins are discovered automatically via Java SPI (`ServiceLoader`) for the interface
+`art.limitium.sofa.plugin.SofaPlugin` (published as `sofa-plugin-api`).
+
+### How to add a plugin jar
+
+- **Drop-in jar**: put your plugin jar into `schema/libs/` (picked up automatically via Gradle `runtimeOnly fileTree(...)`).
+- **As a dependency**: add it to `schema/build.gradle`:
+
+```gradle
+dependencies {
+  runtimeOnly "your.group:your-artifact:1.0.0"
+}
+```
+
+### How to write a plugin
+
+Your plugin module should:
+
+- depend on `art.limitium.sofa:sofa-plugin-api:<version>` (JDK-only API)
+- implement `art.limitium.sofa.plugin.SofaPlugin` and return:
+  - `SofaPlugin.SofaFilter` implementations (generator will proxy them into Pebble filters)
+  - `SofaPlugin.SofaTypeConverter<?>` implementations operating on `art.limitium.sofa.plugin.SofaType`
+    (generator will adapt internal schema `Type` into `SofaType` and proxy into SOFA `TypeConverter`)
+- implement `art.limitium.sofa.plugin.SofaPlugin`
+- register via SPI by adding `META-INF/services/art.limitium.sofa.plugin.SofaPlugin`
+  containing your implementation class name (one per line).
+
 ## Example
 
 Given an Avro schema:

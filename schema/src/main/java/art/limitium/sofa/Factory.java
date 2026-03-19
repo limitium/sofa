@@ -1,14 +1,8 @@
 package art.limitium.sofa;
 
 import art.limitium.sofa.config.FactoryConfig;
-import art.limitium.sofa.ext.*;
 import art.limitium.sofa.schema.Entity;
-import art.limitium.sofa.schema.TypeConverter;
 import com.mitchellbosecke.pebble.PebbleEngine;
-import com.mitchellbosecke.pebble.loader.ClasspathLoader;
-import com.mitchellbosecke.pebble.loader.DelegatingLoader;
-import com.mitchellbosecke.pebble.loader.FileLoader;
-import com.mitchellbosecke.pebble.loader.StringLoader;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import org.apache.avro.Schema;
 import org.apache.avro.Schema.Parser;
@@ -19,7 +13,11 @@ import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.JarURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
@@ -38,33 +36,6 @@ public class Factory {
     static Logger logger = LoggerFactory.getLogger(Factory.class);
 
     /**
-     * List of type converters used for converting between different type systems
-     */
-    private static List<TypeConverter> typeConverters = List.of(
-            new FBTypeConverter(),
-            new FBFactoryConverter(),
-            new FbIsPrimitiveConverter(),
-            new JavaTypeConverter(),
-            new ConnectSchemaConverter(),
-            new ConnectStructGetterConverter(),
-            new LiquidBaseTypeConverter()
-    );
-
-    /**
-     * Pebble engine instance for evaluating inline templates
-     */
-    static PebbleEngine inlineEngine = new PebbleEngine.Builder()
-            .loader(new StringLoader())
-            .newLineTrimming(true)
-            .strictVariables(true)
-            .build();
-
-    static {
-        //@todo: FIX IT ASAP!!!111
-        inlineEngine.getExtensionRegistry().addExtension(new CustomExtension(typeConverters, Map.of()));
-    }
-
-    /**
      * Main entry point for code generation
      * @param args Command line arguments - expects path(s) to generator definition file(s)
      */
@@ -76,7 +47,6 @@ public class Factory {
         String[] configPaths = args[0].split(",");
 
         logger.info("Provided configurations {}:\r\n{}", configPaths.length, String.join("\r\n", configPaths));
-
         Arrays.stream(configPaths).sequential().forEach(Factory::generateForConfiguration);
 
         Duration duration = Duration.between(startTime, Instant.now());
@@ -101,6 +71,9 @@ public class Factory {
         }
 
         logger.info("Loading schemas {}: \r\n{}", factoryConfig.schemas.size(), String.join("\r\n", factoryConfig.schemas));
+        List<String> pluginClasses = factoryConfig.plugins != null ? factoryConfig.plugins : List.of();
+        TemplateEngineFactory templateEngines =
+                new TemplateEngineFactory(Factory.class.getClassLoader(), pluginClasses);
         SchemaDefinition schemaDefinition = loadSchema(basePath, factoryConfig.schemas);
         List<AvroEntity> roots = schemaDefinition.findRoots();
         logger.info("Found roots {}: \r\n{}", roots.size(), String.join("\r\n", roots.stream().map(AvroEntity::getFullname).toList()));
@@ -113,35 +86,39 @@ public class Factory {
         List<Generator> generators = factoryConfig.generators.stream().map(generatorConfig -> {
             String generatorPath = generatorConfig.path;
 
-            Map<String, PebbleTemplate> mainTemplates = loadMainTemplatesForGenerator(basePath, generatorPath, schemas);
+            Map<String, PebbleTemplate> mainTemplates =
+                    loadMainTemplatesForGenerator(templateEngines, basePath, generatorPath, schemas);
 
             logger.info("Evaluate values");
             Map<String, String> valuesContext = new HashMap<>();
             valuesContext.put("basePath", basePath);
 
             if (factoryConfig.values != null) {
-                factoryConfig.values.replaceAll((k, v) -> {
-                    String newValue = evaluateTemplateToString(compileInlineTemplate(v), valuesContext);
-                    valuesContext.put(k, newValue);
-                    return newValue;
-                });
+                factoryConfig.values.replaceAll(
+                        (k, v) -> {
+                            String newValue =
+                                    templateEngines.evaluateTemplateToString(
+                                            templateEngines.compileInlineTemplate(v), valuesContext);
+                            valuesContext.put(k, newValue);
+                            return newValue;
+                        });
             }
 
             return new Generator(
                     generatorPath,
                     mainTemplates,
                     new Generator.Templates(
-                            compileInlineTemplate(generatorConfig.templates.namespace),
-                            compileInlineTemplate(generatorConfig.templates.name),
-                            compileInlineTemplate(generatorConfig.templates.fullname),
-                            compileInlineTemplate(generatorConfig.templates.folder),
-                            compileInlineTemplate(generatorConfig.templates.filename)
-                    ),
+                            templateEngines.compileInlineTemplate(generatorConfig.templates.namespace),
+                            templateEngines.compileInlineTemplate(generatorConfig.templates.name),
+                            templateEngines.compileInlineTemplate(generatorConfig.templates.fullname),
+                            templateEngines.compileInlineTemplate(generatorConfig.templates.folder),
+                            templateEngines.compileInlineTemplate(generatorConfig.templates.filename)),
                     generatorConfig.overrides,
                     generatorConfig.filters,
-                    compileInlineTemplate(generatorConfig.postCall),
+                    templateEngines.compileInlineTemplate(generatorConfig.postCall),
                     schemas,
-                    valuesContext);
+                    valuesContext,
+                    templateEngines.getTemplateEvaluator());
         }).toList();
 
 
@@ -151,7 +128,11 @@ public class Factory {
         }
     }
 
-    private static Map<String, PebbleTemplate> loadMainTemplatesForGenerator(String basePath, String generatorPath, Map<String, Map<String, Entity>> schemas) {
+    private static Map<String, PebbleTemplate> loadMainTemplatesForGenerator(
+            TemplateEngineFactory templateEngines,
+            String basePath,
+            String generatorPath,
+            Map<String, Map<String, Entity>> schemas) {
         String filePath = basePath + "/" + generatorPath;
         String classPath = "generators/" + generatorPath;
         if (generatorPath.startsWith("/")) {
@@ -159,7 +140,8 @@ public class Factory {
         }
 
         //Configure for regular and class loader
-        PebbleEngine pebbleEngineForPath = createPebbleEngineForPath(filePath, classPath, schemas);
+        PebbleEngine pebbleEngineForPath =
+                templateEngines.createPebbleEngineForPath(filePath, classPath, schemas);
 
         List<String> mainTemplatesNames = new ArrayList<>();
         //regular external filepath
@@ -256,31 +238,6 @@ public class Factory {
      * @param schemas Map of schema definitions
      * @return Configured PebbleEngine instance
      */
-    private static PebbleEngine createPebbleEngineForPath(String filePath, String classPath, Map<String, Map<String, Entity>> schemas) {
-        FileLoader fileLoader = new FileLoader();
-        fileLoader.setPrefix(filePath);
-        fileLoader.setSuffix(".peb");
-
-        //Expects
-        ClasspathLoader classpathLoader = new ClasspathLoader();
-        classpathLoader.setPrefix(classPath);
-        classpathLoader.setSuffix(".peb");
-
-        DelegatingLoader delegatingLoader = new DelegatingLoader(List.of(fileLoader, classpathLoader));
-
-
-        PebbleEngine engine = new PebbleEngine.Builder()
-                .loader(delegatingLoader)
-                .newLineTrimming(true)
-                .autoEscaping(false)
-                .strictVariables(true)
-                .build();
-
-
-        engine.getExtensionRegistry().addExtension(new CustomExtension(typeConverters, schemas));
-        return engine;
-    }
-
     /**
      * Loads and parses Avro schemas from files and classpath resources.
      * <p>
@@ -381,26 +338,6 @@ public class Factory {
      * @param template Template string
      * @return Compiled PebbleTemplate
      */
-    private static PebbleTemplate compileInlineTemplate(String template) {
-        return inlineEngine.getTemplate(template);
-    }
-
-    /**
-     * Evaluates a template with given context and returns result as string
-     * @param template PebbleTemplate to evaluate
-     * @param context Context map for template evaluation
-     * @return Evaluated template as string
-     */
-    @SuppressWarnings("unchecked")
-    static String evaluateTemplateToString(PebbleTemplate template, Map<String, ?> context) {
-        StringWriter stringWriter = new StringWriter();
-        try {
-            template.evaluate(stringWriter, (Map<String, Object>) context);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return stringWriter.toString();
-    }
 }
 //todo: external conditions per template generation
 //todo: Do not override if overridden entity structure exactly the same

@@ -7,3 +7,4 @@ pluginManagement {
 rootProject.name = 'sofa'
 
 include 'schema'
+include 'plugin-api'

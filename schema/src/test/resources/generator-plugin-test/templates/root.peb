@@ -1,0 +1,6 @@
+{
+  "name": "{{entity.name}}",
+  "fieldKind": "{{entity.fields[0].type | testType}}",
+  "reversed": "{{ 'abc' | reverse }}"
+}
+

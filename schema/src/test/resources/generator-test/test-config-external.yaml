@@ -1,5 +1,6 @@
 schemas:
   - com.example:test-lib:avro/external/ExternalRecord.avsc
+  - schemas/external-owner.avsc
   - schemas/root.avsc
   - schemas/owner.avsc
   - schemas/child.avsc

@@ -1,0 +1,16 @@
+{
+  "type": "root",
+  "name": "ExternalBatch",
+  "namespace": "com.example.external",
+  "fields": {
+    "batchId": "String",
+    "externalRecords": {
+      "type": "array",
+      "elementType": "ExternalRecord"
+    }
+  },
+  "dependencies": [
+    "ExternalRecord"
+  ]
+}
+

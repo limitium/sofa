@@ -1,0 +1,11 @@
+{
+  "type": "dependent",
+  "name": "ExternalRecord",
+  "namespace": "com.example.external",
+  "fields": {
+    "id": "String"
+  },
+  "owner": "ExternalBatch",
+  "foreignKey": "externalBatchId"
+}
+

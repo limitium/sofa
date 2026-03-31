@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GeneratorTest {
@@ -70,7 +71,43 @@ class GeneratorTest {
                 "Product.json"
         );
     }
-    
+
+    @Test
+    void shouldApplyBlackFilterByFqcnAndPackage() throws IOException {
+        // Given
+        String configPath = copyTestResources("test-config-black-filter.yaml", "schemas", "templates");
+
+        // When
+        Factory.main(new String[]{configPath});
+
+        // Then
+        verifyGeneratedFiles(
+                "Address.json",
+                "CustomerInfo.json",
+                "OrderItem.json",
+                "OrderStatus.json",
+                "Product.json"
+        );
+        verifyNotGeneratedFiles("Order.json", "Cart.json", "CartItem.json");
+    }
+
+    @Test
+    void shouldKeepLocalNameForBlacklistedEntityWhenOverridesPresent() throws IOException {
+        String configPath = copyTestResources(
+                "test-config-black-with-overrides.yaml",
+                "schemas",
+                "templates-base",
+                "templates-entity"
+        );
+
+        Factory.main(new String[]{configPath});
+
+        Path generatedOrderItem = tempDir.resolve("generated").resolve("OrderItemEntity.json");
+        assertTrue(Files.exists(generatedOrderItem), "Generated file not found: OrderItemEntity.json");
+        String content = Files.readString(generatedOrderItem);
+        assertTrue(content.contains("\"owner\": \"OrderEntity\""), "Expected owner to use OrderEntity from local naming");
+    }
+
     private String copyTestResources(String configFile, String... directories) throws IOException {
         // Copy config file
         String configContent = readResource("/generator-test/" + configFile);
@@ -102,6 +139,15 @@ class GeneratorTest {
                 generated,
                 "Generated file doesn't match expected for: " + fileName
             );
+        }
+    }
+
+    private void verifyNotGeneratedFiles(String... fileNames) {
+        Path outputDir = tempDir.resolve("generated");
+
+        for (String fileName : fileNames) {
+            Path generatedFile = outputDir.resolve(fileName);
+            assertFalse(Files.exists(generatedFile), "Generated file should not exist: " + fileName);
         }
     }
     

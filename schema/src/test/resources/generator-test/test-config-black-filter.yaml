@@ -1,0 +1,19 @@
+schemas:
+  - schemas/root.avsc
+  - schemas/owner.avsc
+  - schemas/child.avsc
+  - schemas/enum.avsc
+  - schemas/record.avsc
+
+generators:
+  - path: templates
+    filters:
+      black:
+        - com.example.order.Order
+        - com.example.cart
+    templates:
+      namespace: "{{schema.namespace}}"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated"
+      filename: "{{name}}.json"

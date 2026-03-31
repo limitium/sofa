@@ -1,0 +1,29 @@
+schemas:
+  - schemas/root.avsc
+  - schemas/owner.avsc
+  - schemas/child.avsc
+  - schemas/enum.avsc
+  - schemas/record.avsc
+
+generators:
+  - path: templates-base
+    templates:
+      namespace: "{{schema.namespace}}"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated-base"
+      filename: "{{name}}.json"
+
+  - path: templates-entity
+    filters:
+      white:
+        - com.example.order.OrderItem
+      black:
+        - com.example.order.Order
+    templates:
+      namespace: "{{schema.namespace}}"
+      name: "{{schema.name}}Entity"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated"
+      filename: "{{name}}.json"
+    overrides: "templates-base"

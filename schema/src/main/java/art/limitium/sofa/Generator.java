@@ -99,7 +99,7 @@ public class Generator {
             String namespace = generateNamespace(avroEntity.schema);
             String name = generateName(avroEntity.schema);
 
-            if (overrides != null && !shouldBeGenerated) {
+            if (overrides != null && !shouldBeGenerated && !isBlacklisted(avroEntity.schema)) {
                 Factory.logger.info("Take entity `{}` from `{}`", avroEntity.getFullname(), overrides);
                 Entity parentEntity = schemas.get(overrides).get(avroEntity.getFullname());
                 namespace = parentEntity.getNamespace();
@@ -195,7 +195,7 @@ public class Generator {
                 Factory.logger.info("Skip entity `{}` by white filter", entity.schema.getFullName());
                 return false;
             }
-            if (filters.black != null && filters.black.contains(entity.schema.getFullName())) {
+            if (isBlacklisted(entity.schema)) {
                 Factory.logger.info("Skip entity `{}` by black filter", entity.schema.getFullName());
                 return false;
             }
@@ -212,6 +212,33 @@ public class Generator {
         }
 
         Factory.logger.info("Skip entity `{}` no proper template", entity.getFullname());
+        return false;
+    }
+
+    private boolean isBlacklisted(Schema schema) {
+        if (filters == null || filters.black == null || filters.black.isEmpty()) {
+            return false;
+        }
+
+        String fullName = schema.getFullName();
+        for (String blackItem : filters.black) {
+            if (blackItem == null) {
+                continue;
+            }
+            String normalizedBlackItem = blackItem.trim();
+            if (normalizedBlackItem.isEmpty()) {
+                continue;
+            }
+
+            // Keep existing behavior: exact FQCN match.
+            if (normalizedBlackItem.equals(fullName)) {
+                return true;
+            }
+            // Support package filters (exact package and nested packages).
+            if (fullName.startsWith(normalizedBlackItem + ".")) {
+                return true;
+            }
+        }
         return false;
     }
 

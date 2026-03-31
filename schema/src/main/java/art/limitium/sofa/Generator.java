@@ -86,7 +86,6 @@ public class Generator {
     public void generate(List<AvroEntity> avroEntities) {
         Map<String, Entity> entities = new HashMap<>();
         Map<String, Entity> mapByAvroName = new HashMap<>();
-        List<Entity> toGenerate = new ArrayList<>();
 
         if(mainTemplates.containsKey("schema")){
             String fileName = evaluateFolderFileNameCreateFolder("", Collections.singletonMap("fullname", "schema"), "", Collections.singletonMap("fullname", "schema"));
@@ -133,9 +132,6 @@ public class Generator {
             if (entity != null) {
                 entities.put(entity.getFullname(), entity);
                 mapByAvroName.put(avroEntity.getFullname(), entity);
-                if (shouldBeGenerated) {
-                    toGenerate.add(entity);
-                }
             }
         }
 
@@ -175,6 +171,15 @@ public class Generator {
             }
         }
         Factory.logger.info("Relations created");
+
+        List<Entity> toGenerate = avroEntities.stream()
+                .filter(avroEntity -> !isBlacklisted(avroEntity.schema))
+                .filter(this::shouldBeGenerated)
+                .map(avroEntity -> Objects.requireNonNull(
+                        mapByAvroName.get(avroEntity.getFullname()),
+                        "Entity is missing for `" + avroEntity.getFullname() + "`"))
+                .filter(this::hasApplicableTemplate)
+                .toList();
 
         List<String> files = toGenerate.stream().map(this::generateFor).toList();
 
@@ -289,9 +294,11 @@ public class Generator {
             } else if (mainTemplates.containsKey("child") && !recordEntity.isRoot()) {
                 Factory.logger.info("Generate child {} into {}", recordEntity.getFullname(), fullFileName);
                 template = mainTemplates.get("child");
-            } else {
+            } else if (mainTemplates.containsKey("record")) {
                 Factory.logger.info("Generate record {} into {}", recordEntity.getFullname(), fullFileName);
                 template = mainTemplates.get("record");
+            } else {
+                throw new IllegalStateException("No applicable template for entity `" + recordEntity.getFullname() + "`");
             }
         }
         if (fullFileName.contains("/")) {
@@ -309,6 +316,18 @@ public class Generator {
         }
         evaluateTemplateToFile(template, extendValuesContext(context), fullFileName);
         return fullFileName;
+    }
+
+    private boolean hasApplicableTemplate(Entity entity) {
+        if (entity instanceof EnumEntity) {
+            return mainTemplates.containsKey("enum");
+        }
+        RecordEntity recordEntity = (RecordEntity) entity;
+        return (mainTemplates.containsKey("root") && recordEntity.isRoot())
+                || (mainTemplates.containsKey("owner") && recordEntity.isOwner())
+                || (mainTemplates.containsKey("dependent") && !recordEntity.getOwners().isEmpty())
+                || (mainTemplates.containsKey("child") && !recordEntity.isRoot())
+                || mainTemplates.containsKey("record");
     }
 
     private String evaluateFolderFileNameCreateFolder(String folderName, Map<String, Object> folderContext, String fileName, Map<String, Object> filenameContext) {

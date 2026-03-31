@@ -84,28 +84,10 @@ class GeneratorTest {
         verifyGeneratedFiles(
                 "Address.json",
                 "CustomerInfo.json",
-                "OrderItem.json",
                 "OrderStatus.json",
                 "Product.json"
         );
         verifyNotGeneratedFiles("Order.json", "Cart.json", "CartItem.json");
-    }
-
-    @Test
-    void shouldKeepLocalNameForBlacklistedEntityWhenOverridesPresent() throws IOException {
-        String configPath = copyTestResources(
-                "test-config-black-with-overrides.yaml",
-                "schemas",
-                "templates-base",
-                "templates-entity"
-        );
-
-        Factory.main(new String[]{configPath});
-
-        Path generatedOrderItem = tempDir.resolve("generated").resolve("OrderItemEntity.json");
-        assertTrue(Files.exists(generatedOrderItem), "Generated file not found: OrderItemEntity.json");
-        String content = Files.readString(generatedOrderItem);
-        assertTrue(content.contains("\"owner\": \"OrderEntity\""), "Expected owner to use OrderEntity from local naming");
     }
 
     private String copyTestResources(String configFile, String... directories) throws IOException {

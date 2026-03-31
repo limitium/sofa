@@ -94,12 +94,16 @@ public class Generator {
         }
 
         for (AvroEntity avroEntity : avroEntities) {
+            if (isBlacklisted(avroEntity.schema)) {
+                Factory.logger.info("Skip entity `{}` by black filter", avroEntity.schema.getFullName());
+                continue;
+            }
             boolean shouldBeGenerated = shouldBeGenerated(avroEntity);
 
             String namespace = generateNamespace(avroEntity.schema);
             String name = generateName(avroEntity.schema);
 
-            if (overrides != null && !shouldBeGenerated && !isBlacklisted(avroEntity.schema)) {
+            if (overrides != null && !shouldBeGenerated) {
                 Factory.logger.info("Take entity `{}` from `{}`", avroEntity.getFullname(), overrides);
                 Entity parentEntity = schemas.get(overrides).get(avroEntity.getFullname());
                 namespace = parentEntity.getNamespace();
@@ -145,6 +149,10 @@ public class Generator {
                 //Regular direct dependencies
                 for (AvroEntity dependency : avroEntity.dependencies.values()) {
                     Entity dependencyEntity = mapByAvroName.get(dependency.getFullname());
+                    if (dependencyEntity == null) {
+                        Factory.logger.info("Skip dependency `{}` for `{}` because dependency is not available in current generator scope", dependency.getFullname(), recordEntity.getFullname());
+                        continue;
+                    }
                     recordEntity.getDependencies().add(dependencyEntity);
                     if(dependencyEntity instanceof RecordEntity dependencyRecordEntity){
                         dependencyRecordEntity.getParents().add(recordEntity);
@@ -154,6 +162,10 @@ public class Generator {
                 //1-N relations
                 for (AvroEntity ownerAvro : avroEntity.owners) {
                     Entity ownerEntity = mapByAvroName.get(ownerAvro.getFullname());
+                    if (ownerEntity == null) {
+                        Factory.logger.info("Skip owner `{}` for `{}` because owner is not available in current generator scope", ownerAvro.getFullname(), recordEntity.getFullname());
+                        continue;
+                    }
                     if (ownerEntity instanceof RecordEntity owner) {
                         recordEntity.getOwners().add(owner);
                     } else {
@@ -193,10 +205,6 @@ public class Generator {
             //@todo: enforce white list items be in scope of work
             if (filters.white != null && !filters.white.isEmpty() && !filters.white.contains(entity.schema.getFullName())) {
                 Factory.logger.info("Skip entity `{}` by white filter", entity.schema.getFullName());
-                return false;
-            }
-            if (isBlacklisted(entity.schema)) {
-                Factory.logger.info("Skip entity `{}` by black filter", entity.schema.getFullName());
                 return false;
             }
         }

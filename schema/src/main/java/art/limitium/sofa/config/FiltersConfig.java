@@ -5,4 +5,5 @@ import java.util.List;
 public class FiltersConfig {
     public List<String> white;
     public List<String> black;
+    public List<String> skipWrite;
 }

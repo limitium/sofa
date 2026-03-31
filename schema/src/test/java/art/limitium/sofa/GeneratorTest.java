@@ -90,6 +90,19 @@ class GeneratorTest {
         verifyNotGeneratedFiles("Order.json", "Cart.json", "CartItem.json");
     }
 
+    @Test
+    void shouldSkipWriteButKeepEntityForRelations() throws IOException {
+        String configPath = copyTestResources("test-config-skip-write.yaml", "schemas", "templates");
+
+        Factory.main(new String[]{configPath});
+
+        Path generatedOrderItem = tempDir.resolve("generated").resolve("OrderItemEntity.json");
+        assertTrue(Files.exists(generatedOrderItem), "Generated file not found: OrderItemEntity.json");
+        String content = Files.readString(generatedOrderItem);
+        assertTrue(content.contains("\"owner\": \"Order\""), "Expected owner to use original name from overrides when skipWrite is active");
+        verifyNotGeneratedFiles("OrderEntity.json");
+    }
+
     private String copyTestResources(String configFile, String... directories) throws IOException {
         // Copy config file
         String configContent = readResource("/generator-test/" + configFile);

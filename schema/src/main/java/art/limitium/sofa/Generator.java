@@ -102,7 +102,7 @@ public class Generator {
             String namespace = generateNamespace(avroEntity.schema);
             String name = generateName(avroEntity.schema);
 
-            if (overrides != null && !shouldBeGenerated) {
+            if (overrides != null && (!shouldBeGenerated || isSkipWrite(avroEntity.schema))) {
                 Factory.logger.info("Take entity `{}` from `{}`", avroEntity.getFullname(), overrides);
                 Entity parentEntity = schemas.get(overrides).get(avroEntity.getFullname());
                 namespace = parentEntity.getNamespace();
@@ -175,6 +175,13 @@ public class Generator {
         List<Entity> toGenerate = avroEntities.stream()
                 .filter(avroEntity -> !isBlacklisted(avroEntity.schema))
                 .filter(this::shouldBeGenerated)
+                .filter(avroEntity -> {
+                    if (isSkipWrite(avroEntity.schema)) {
+                        Factory.logger.info("Skip writing entity `{}` by skipWrite filter", avroEntity.schema.getFullName());
+                        return false;
+                    }
+                    return true;
+                })
                 .map(avroEntity -> Objects.requireNonNull(
                         mapByAvroName.get(avroEntity.getFullname()),
                         "Entity is missing for `" + avroEntity.getFullname() + "`"))
@@ -229,26 +236,32 @@ public class Generator {
     }
 
     private boolean isBlacklisted(Schema schema) {
-        if (filters == null || filters.black == null || filters.black.isEmpty()) {
+        if (filters == null) {
             return false;
         }
+        return matchesFqcnOrPackage(filters.black, schema.getFullName());
+    }
 
-        String fullName = schema.getFullName();
-        for (String blackItem : filters.black) {
-            if (blackItem == null) {
+    private boolean isSkipWrite(Schema schema) {
+        if (filters == null) {
+            return false;
+        }
+        return matchesFqcnOrPackage(filters.skipWrite, schema.getFullName());
+    }
+
+    private boolean matchesFqcnOrPackage(List<String> patterns, String fullName) {
+        if (patterns == null || patterns.isEmpty()) {
+            return false;
+        }
+        for (String pattern : patterns) {
+            if (pattern == null) {
                 continue;
             }
-            String normalizedBlackItem = blackItem.trim();
-            if (normalizedBlackItem.isEmpty()) {
+            String normalizedPattern = pattern.trim();
+            if (normalizedPattern.isEmpty()) {
                 continue;
             }
-
-            // Keep existing behavior: exact FQCN match.
-            if (normalizedBlackItem.equals(fullName)) {
-                return true;
-            }
-            // Support package filters (exact package and nested packages).
-            if (fullName.startsWith(normalizedBlackItem + ".")) {
+            if (normalizedPattern.equals(fullName) || fullName.startsWith(normalizedPattern + ".")) {
                 return true;
             }
         }

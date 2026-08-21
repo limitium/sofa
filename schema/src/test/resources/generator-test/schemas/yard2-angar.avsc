@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "Angar",
+  "namespace": "com.example.yard2",
+  "fields": [
+    {"name": "angarId", "type": "string", "primary": true},
+    {"name": "garage", "type": "com.example.yard2.Garage"}
+  ]
+}

@@ -22,13 +22,13 @@
             {% endif %}
             </column>
         {% endfor %}
-        {% if owners.size == 1 %}
+        {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             {% set owner = owners[0] | from("pojo_entities") %}
             <column name="{{ owner.name | toSnakeCase | upper }}_ID" type="bigint" />
         {% endif %}
-        {% if owners.size > 1 %}
-            <column name="OWNER_ENTITY" type="bigint" />
-            <column name="OWNER_ID" type="varchar2(255)" />
+        {% if entity.polymorphicallyOwned %}
+            <column name="OWNER_ENTITY" type="varchar2(255)" />
+            <column name="OWNER_ID" type="bigint" />
         {% endif %}
     </createTable>
 </changeSet>

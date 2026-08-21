@@ -66,11 +66,11 @@ public class {{ entity.name }} implements Converter {
             {% for field in entity | flattenFields('_') | noRecordLists -%}
                 .field("{{ field.name | toSnakeCase | upper }}", {{ field.type | connectSchemaType }})
             {% endfor %}
-            {% if owners.size == 1 %}
+            {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             {% set owner = owners[0] | from("pojo_entities") %}
                 .field("{{ owner.name | toSnakeCase | upper }}_ID", Schema.INT64_SCHEMA)
             {% endif %}
-            {% if owners.size > 1 %}
+            {% if entity.polymorphicallyOwned %}
                 .field("OWNER_ENTITY", Schema.STRING_SCHEMA)
                 .field("OWNER_ID", Schema.INT64_SCHEMA)
             {% endif %}
@@ -107,11 +107,11 @@ public class {{ entity.name }} implements Converter {
                     {% endif %}
                 {% endif %}
             {% endfor %}
-            {% if owners.size == 1 %}
+            {% if owners.size == 1 and not entity.polymorphicallyOwned %}
                 {% set owner = owners[0] | from("pojo_entities") %}
                     .put("{{ owner.name | toSnakeCase | upper }}_ID", obj.{{ owner.name | toCamelCase }}Id)
                 {% endif %}
-            {% if owners.size > 1 %}
+            {% if entity.polymorphicallyOwned %}
                 .put("OWNER_ENTITY", obj.ownerEntity)
                 .put("OWNER_ID", obj.ownerId)
             {% endif %}

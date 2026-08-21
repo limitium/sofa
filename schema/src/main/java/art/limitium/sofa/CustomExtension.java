@@ -418,7 +418,7 @@ public class CustomExtension extends AbstractExtension {
                 if (field.type() instanceof Type.RecordType recordType) {
                     flattenFields(recordType.getRecord(), fieldName, flattenFields, joiner);
                 } else {
-                    flattenFields.add(new RecordEntity.Field(fieldName, field.type()));
+                    flattenFields.add(new RecordEntity.Field(fieldName, field.type(), field.primary()));
                 }
             }
         }
@@ -463,12 +463,12 @@ public class CustomExtension extends AbstractExtension {
             for (RecordEntity.Field field : record.getFields()) {
                 String fieldName = fieldPrefix + field.name();
                 if (field.type() instanceof Type.RecordType recordType) {
-                    flattenFields.add(new RecordEntity.Field(fieldName, field.type()));
+                    flattenFields.add(new RecordEntity.Field(fieldName, field.type(), field.primary()));
                     flattenFields(recordType.getRecord(), fieldName, flattenFields, joiner);
                     Type.RecordCloseType type = new Type.RecordCloseType(recordType);
                     flattenFields.add(new RecordEntity.Field(fieldName, type));
                 } else {
-                    flattenFields.add(new RecordEntity.Field(fieldName, field.type()));
+                    flattenFields.add(new RecordEntity.Field(fieldName, field.type(), field.primary()));
                 }
             }
         }
@@ -513,7 +513,7 @@ public class CustomExtension extends AbstractExtension {
             for (RecordEntity.Field field : record.getFields()) {
                 String fieldName = fieldPrefix + field.name();
                 if (field.type() instanceof Type.RecordType recordType) {
-                    flattenFields.add(new RecordEntity.Field(fieldName, field.type()));
+                    flattenFields.add(new RecordEntity.Field(fieldName, field.type(), field.primary()));
                     flattenFields(recordType.getRecord(), fieldName, flattenFields, joiner);
                 }
             }
@@ -532,28 +532,15 @@ public class CustomExtension extends AbstractExtension {
 
         @Override
         public Object apply(Object o, Map<String, Object> args, PebbleTemplate pebbleTemplate, EvaluationContext evaluationContext, int i) throws PebbleException {
-            if (o instanceof RecordEntity record && record.isDependent()) {
-                Set<RecordEntity> flattenOwners = new HashSet<>();
-                flattenOwners(record.getParents(), flattenOwners);
-                return flattenOwners.stream().toList();
+            // Every record answers with a list, empty when nothing owns it. A record can be an owned
+            // entity without any owner in this module, by declaring polymorphic ownership, and its
+            // templates still ask for the owner list.
+            if (o instanceof RecordEntity record) {
+                return record.getFlattenOwners();
             }
             return o;
         }
 
-        /**
-         * Recursively flattens the ownership hierarchy
-         * @param owners Set of owner record entities
-         * @param flattenOwners Set to collect flattened owners
-         */
-        private void flattenOwners(Set<RecordEntity> owners, Set<RecordEntity> flattenOwners) {
-            owners.forEach(o -> {
-                if (o.isDependent() || o.isRoot()) {
-                    flattenOwners.add(o);
-                } else {
-                    flattenOwners(o.getParents(), flattenOwners);
-                }
-            });
-        }
 
         @Override
         public List<String> getArgumentNames() {

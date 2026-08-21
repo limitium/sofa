@@ -1,0 +1,9 @@
+{
+  "world": "entities", "type": "root",
+  "class": "{{entity.namespace}}.{{entity.name}}",
+  "fields": {
+    {% for field in entity.fields | noRecordLists %}
+    "{{field.name}}": "{{field.type | javaType}}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "record",
+  "name": "Car",
+  "namespace": "com.example.car",
+  "ownership": "polymorphic",
+  "fields": [
+    {
+      "name": "carId",
+      "type": "string",
+      "primary": true
+    },
+    {
+      "name": "model",
+      "type": "string"
+    }
+  ]
+}

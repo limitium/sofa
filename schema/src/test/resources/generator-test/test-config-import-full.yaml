@@ -1,0 +1,23 @@
+# Module B: Building -> Garage -> Car, where Car comes from the library.
+imports:
+  - "com.example:carlib"
+
+schemas:
+  - schemas/building.avsc
+
+generators:
+  - path: templates-common
+    templates:
+      namespace: "{{schema.namespace}}.common.pojo"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/common"
+      filename: "{{name}}.json"
+
+  - path: templates-entities
+    templates:
+      namespace: "{{schema.namespace}}.entities.pojo"
+      name: "{{schema.name}}Entity"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

@@ -1,0 +1,24 @@
+# Module B: the yard, with Car coming from the library. Same naming as the single module run.
+imports:
+  - "com.example:carsame"
+
+schemas:
+  - schemas/yard2-building.avsc
+  - schemas/yard2-angar.avsc
+
+generators:
+  - path: templates-msg
+    templates:
+      namespace: "{{schema.namespace}}.messages"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/messages"
+      filename: "{{name}}.json"
+
+  - path: templates-ent
+    templates:
+      namespace: "{{schema.namespace}}.entities"
+      name: "{{schema.name}}{% if role != 'child' %}Entity{% endif %}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

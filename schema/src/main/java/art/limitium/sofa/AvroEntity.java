@@ -3,6 +3,7 @@ package art.limitium.sofa;
 import art.limitium.sofa.schema.Dependency;
 import art.limitium.sofa.schema.NamedEntity;
 import art.limitium.sofa.schema.Owner;
+import art.limitium.sofa.schema.SchemaAnnotations;
 import org.apache.avro.Schema;
 
 import java.util.ArrayList;
@@ -82,6 +83,33 @@ public class AvroEntity implements Owner<AvroEntity>, Dependency<AvroEntity>, Na
      * @return true if this record owns other records through array fields, false otherwise
      */
     public boolean isOwner() {
+        if (SchemaAnnotations.suppressesOwner(schema)) {
+            return false;
+        }
         return schema.getFields().stream().anyMatch(f -> f.schema().getType() == Schema.Type.ARRAY && f.schema().getElementType().getType() == Schema.Type.RECORD);
+    }
+
+    /**
+     * Checks whether this record declares polymorphic ownership, which makes it eligible for the
+     * dependent template even when no record in the current module owns it.
+     *
+     * @return true if the schema is annotated {@code "ownership": "polymorphic"}
+     */
+    public boolean isPolymorphicallyOwned() {
+        return SchemaAnnotations.isPolymorphicallyOwned(schema);
+    }
+
+    /**
+     * Checks whether this record is an entity owned by others, and so eligible for the dependent
+     * template. Either something in this module owns it, or it declares polymorphic ownership and is
+     * owned by records that may not exist yet.
+     *
+     * @return true if the record should be treated as an owned entity
+     */
+    public boolean isOwnedEntity() {
+        if (SchemaAnnotations.suppressesDependent(schema)) {
+            return false;
+        }
+        return !owners.isEmpty() || SchemaAnnotations.isPolymorphicallyOwned(schema);
     }
 }

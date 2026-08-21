@@ -1,0 +1,17 @@
+schemas:
+  - schemas/polymorphic.avsc
+
+manifest:
+  artifact: "com.example:car-lib"
+  folder: "published"
+  schemas:
+    - "avro/car/Car.avsc"
+
+generators:
+  - path: templates
+    templates:
+      namespace: "{{schema.namespace}}.entities.pojo"
+      name: "{{schema.name}}Entity"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated"
+      filename: "{{name}}.json"

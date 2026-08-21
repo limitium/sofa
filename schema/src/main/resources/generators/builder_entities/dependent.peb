@@ -59,8 +59,8 @@ public class {{ entity.name }}{
             {%- endif %}
         {% endfor %}
 
-        {% if owners.size > 0 %}
-            {% if owners.size > 1 %}
+        {% if owners.size > 0 or entity.polymorphicallyOwned %}
+            {% if entity.polymorphicallyOwned %}
                 int ownerEntity =  flatBufferBuilder.createString(dependent.ownerEntity);
             {% endif %}
         {% endif %}
@@ -100,14 +100,14 @@ public class {{ entity.name }}{
         {% endfor -%}
 
 
-        {% if owners.size > 0 %}
+        {% if owners.size > 0 or entity.polymorphicallyOwned %}
             //Links do dependents {{ owners.size }} total
-        {% if owners.size == 1 %}
+        {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             {% set fbOwner = owners[0] | from("flatbuffers_entities") %}
             {% set pojoOwner = owners[0] | from("pojo_entities") %}
             {{ fbe.name }}.add{{ fbOwner.name }}Id(flatBufferBuilder, dependent.{{ pojoOwner.name | toCamelCase }}Id);
         {% endif %}
-            {% if owners.size > 1 %}
+            {% if entity.polymorphicallyOwned %}
                 //Todo: check entities
                 {% for owner in owners %}
                     //{{ owner.name }}
@@ -171,14 +171,14 @@ public class {{ entity.name }}{
 
         {% endfor -%}
 
-        {% if owners.size > 0 %}
+        {% if owners.size > 0 or entity.polymorphicallyOwned %}
                 //Links do dependents {{ owners.size }} total
-            {% if owners.size == 1 %}
+            {% if owners.size == 1 and not entity.polymorphicallyOwned %}
                 {% set fbOwner = owners[0] | from("flatbuffers_entities") %}
                 {% set owner = owners[0] | from("pojo_entities") %}
                 dependent.{{ owner.name | toCamelCase }}Id = fbDependent.{{ fbOwner.name | toCamelCase }}Id();
             {% endif %}
-            {% if owners.size > 1 %}
+            {% if entity.polymorphicallyOwned %}
                 dependent.ownerEntity = fbDependent.ownerEntity();
                 dependent.ownerId = fbDependent.ownerId();
             {% endif %}

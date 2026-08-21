@@ -1,0 +1,26 @@
+# Module A: Car only, using the same naming conventions its consumers use.
+schemas:
+  - schemas/polymorphic.avsc
+
+manifest:
+  artifact: "com.example:carsame"
+  folder: "published"
+  schemas:
+    - "avro/car/Car.avsc"
+
+generators:
+  - path: templates-msg
+    templates:
+      namespace: "{{schema.namespace}}.messages"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/messages"
+      filename: "{{name}}.json"
+
+  - path: templates-ent
+    templates:
+      namespace: "{{schema.namespace}}.entities"
+      name: "{{schema.name}}{% if role != 'child' %}Entity{% endif %}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

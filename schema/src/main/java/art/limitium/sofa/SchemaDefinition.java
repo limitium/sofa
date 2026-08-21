@@ -1,5 +1,6 @@
 package art.limitium.sofa;
 
+import art.limitium.sofa.schema.SchemaAnnotations;
 import org.apache.avro.Schema;
 
 import java.util.HashMap;
@@ -22,7 +23,10 @@ public class SchemaDefinition {
 
     public AvroEntity addRecord(Schema schema) {
 
-        AvroEntity avroEntity = records.computeIfAbsent(schema.getFullName(), s -> new AvroEntity(schema));
+        AvroEntity avroEntity = records.computeIfAbsent(schema.getFullName(), s -> {
+            SchemaAnnotations.validate(schema);
+            return new AvroEntity(schema);
+        });
 
         if (schema.getType() == Schema.Type.RECORD) {
             for (Schema.Field field : schema.getFields()) {
@@ -49,10 +53,47 @@ public class SchemaDefinition {
         }
     }
 
+    /**
+     * Finds records nothing depends on and marks them as roots.
+     * <p>
+     * Records that pin themselves to a non root role via annotations are excluded even when nothing
+     * in this module references them: a composite or a polymorphically owned record is not an
+     * aggregate root just because its owner happens to live in another module.
+     */
     public List<AvroEntity> findRoots() {
         List<String> dependencies = records.values().stream().flatMap(n -> n.dependencies.keySet().stream()).collect(Collectors.toList());
-        roots = records.values().stream().filter(avroEntity -> avroEntity.schema.getType() == Schema.Type.RECORD && !dependencies.contains(avroEntity.getFullname())).peek(avroEntity -> avroEntity.isRoot = true).collect(Collectors.toList());
+        roots = records.values().stream()
+                .filter(avroEntity -> avroEntity.schema.getType() == Schema.Type.RECORD)
+                .filter(avroEntity -> !dependencies.contains(avroEntity.getFullname()))
+                .filter(avroEntity -> !SchemaAnnotations.suppressesRoot(avroEntity.schema))
+                .peek(avroEntity -> avroEntity.isRoot = true)
+                .collect(Collectors.toList());
         return roots;
+    }
+
+    /**
+     * Finds every record that pins its role by annotation, for reporting
+     */
+    public List<AvroEntity> findAnnotatedRecords() {
+        return records.values().stream()
+                .filter(avroEntity -> avroEntity.schema.getType() == Schema.Type.RECORD)
+                .filter(avroEntity -> SchemaAnnotations.suppressesRoot(avroEntity.schema))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Finds annotated records that no root reaches, so they still enter the scope of work.
+     * <p>
+     * The scope of work is walked from the roots, so a record pinned out of root-ness by an
+     * annotation would otherwise become invisible when nothing in this module references it. This is
+     * the case a library hits for the records it exists to publish.
+     */
+    public List<AvroEntity> findDeclaredEntryPoints() {
+        return records.values().stream()
+                .filter(avroEntity -> avroEntity.schema.getType() == Schema.Type.RECORD)
+                .filter(avroEntity -> !avroEntity.isRoot)
+                .filter(avroEntity -> SchemaAnnotations.suppressesRoot(avroEntity.schema))
+                .collect(Collectors.toList());
     }
 
 }

@@ -1,0 +1,19 @@
+{
+  "artifact": "com.example:engine-lib",
+  "schemas": [
+    "avro/car/Engine.avsc"
+  ],
+  "generators": [
+    "templates",
+    "templates-messages"
+  ],
+  "records": {
+    "com.example.car.Engine": {
+      "templates-messages": {
+        "namespace": "com.example.car.messages.pojo",
+        "name": "Engine",
+        "fullname": "com.example.car.messages.pojo.Engine"
+      }
+    }
+  }
+}

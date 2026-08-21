@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "Truck",
+  "namespace": "com.example.car",
+  "ownership": "shared",
+  "fields": [
+    {"name": "truckId", "type": "string", "primary": true}
+  ]
+}

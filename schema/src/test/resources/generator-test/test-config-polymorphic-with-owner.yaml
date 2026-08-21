@@ -1,0 +1,14 @@
+# Car is annotated polymorphic AND owned by Garage in this module.
+# The annotation must win over the single named foreign key the graph alone would produce.
+schemas:
+  - schemas/polymorphic.avsc
+  - schemas/garage.avsc
+
+generators:
+  - path: templates
+    templates:
+      namespace: "{{schema.namespace}}"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated"
+      filename: "{{name}}.json"

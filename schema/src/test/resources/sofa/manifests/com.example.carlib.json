@@ -1,0 +1,24 @@
+{
+  "artifact": "com.example:carlib",
+  "schemas": [
+    "avro/car/Car.avsc"
+  ],
+  "generators": [
+    "templates-common",
+    "templates-entities"
+  ],
+  "records": {
+    "com.example.car.Car": {
+      "templates-common": {
+        "namespace": "com.example.car.common.pojo",
+        "name": "Car",
+        "fullname": "com.example.car.common.pojo.Car"
+      },
+      "templates-entities": {
+        "namespace": "com.example.car.entities.pojo",
+        "name": "CarEntity",
+        "fullname": "com.example.car.entities.pojo.CarEntity"
+      }
+    }
+  }
+}

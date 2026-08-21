@@ -1,0 +1,27 @@
+# Module A: publishes Car in both worlds. Deliberately uses its own namespaces (libmsg/libent) so a
+# consumer that borrows is distinguishable from one that regenerated its own copy.
+schemas:
+  - schemas/polymorphic.avsc
+
+manifest:
+  artifact: "com.example:carworlds"
+  folder: "published"
+  schemas:
+    - "avro/car/Car.avsc"
+
+generators:
+  - path: templates-msg
+    templates:
+      namespace: "{{schema.namespace}}.libmsg"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/messages"
+      filename: "{{name}}.json"
+
+  - path: templates-ent
+    templates:
+      namespace: "{{schema.namespace}}.{% if role == 'child' %}libinner{% else %}libent{% endif %}"
+      name: "{{schema.name}}{% if role != 'child' %}Entity{% endif %}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

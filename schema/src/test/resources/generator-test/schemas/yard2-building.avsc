@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "Building",
+  "namespace": "com.example.yard2",
+  "fields": [
+    {"name": "buildingId", "type": "string", "primary": true},
+    {
+      "name": "garage",
+      "type": {
+        "type": "record",
+        "name": "Garage",
+        "role": "child",
+        "fields": [
+          {"name": "capacity", "type": "int"},
+          {"name": "cars", "type": {"type": "array", "items": "com.example.car.Car"}}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+# Module B: Building and Angar embed the composite Garage, which holds Cars from the library.
+imports:
+  - "com.example:carworlds"
+
+schemas:
+  - schemas/yard2-building.avsc
+  - schemas/yard2-angar.avsc
+
+generators:
+  - path: templates-msg
+    templates:
+      namespace: "{{schema.namespace}}.messages"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/messages"
+      filename: "{{name}}.json"
+
+  - path: templates-ent
+    templates:
+      namespace: "{{schema.namespace}}.entities"
+      name: "{{schema.name}}{% if role != 'child' %}Entity{% endif %}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

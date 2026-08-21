@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "Garage",
+  "namespace": "com.example.building",
+  "fields": [
+    {
+      "name": "garageId",
+      "type": "string",
+      "primary": true
+    },
+    {
+      "name": "cars",
+      "type": {
+        "type": "array",
+        "items": "com.example.car.Car"
+      }
+    }
+  ]
+}

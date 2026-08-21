@@ -1,0 +1,15 @@
+imports:
+  - "com.example:car-lib"
+
+schemas:
+  - schemas/garage.avsc
+
+generators:
+  # the library never ran this generator path, so its records are generated locally
+  - path: templates-base
+    templates:
+      namespace: "{{schema.namespace}}.local"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated"
+      filename: "{{name}}.local.json"

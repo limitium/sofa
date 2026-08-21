@@ -14,17 +14,17 @@ public class {{ entity.name }}{
     {% endfor %}
 
     {% set owners = entity | flattenOwners %}
-    {% if owners.size > 0 %}
+    {% if owners.size > 0 or entity.polymorphicallyOwned %}
         //Links do dependents {{ owners.size }} total
         //Todo: check entities
         {% for owner in owners %}
             //{{ owner.name }}
 
         {% endfor %}
-        {% if owners.size == 1 %}
+        {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             public long {{ owners[0].name | toCamelCase }}Id;
         {% endif %}
-        {% if owners.size > 1 %}
+        {% if entity.polymorphicallyOwned %}
             public String ownerEntity;
             public long ownerId;
         {% endif %}
@@ -42,8 +42,8 @@ public class {{ entity.name }}{
 
     {% endfor %}
 
-    {% if owners.size > 0 %}
-        {% if owners.size == 1 %}
+    {% if owners.size > 0 or entity.polymorphicallyOwned %}
+        {% if owners.size == 1 and not entity.polymorphicallyOwned %}
 
             public void set{{ owners[0].name | toCamelCase | capitalize }}Id(long val){
                 this.{{ owners[0].name | toCamelCase }}Id = val;
@@ -54,7 +54,7 @@ public class {{ entity.name }}{
             }
 
         {% endif %}
-        {% if owners.size > 1 %}
+        {% if entity.polymorphicallyOwned %}
 
             public void setOwnerEntity(String val){
                 this.ownerEntity = val;

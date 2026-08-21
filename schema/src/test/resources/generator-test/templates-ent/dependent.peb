@@ -1,0 +1,15 @@
+{
+  "world": "entities", "type": "dependent",
+  "class": "{{entity.namespace}}.{{entity.name}}",
+  "fields": {
+    {% for field in entity.fields | noRecordLists %}
+    "{{field.name}}": "{{field.type | javaType}}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  },
+  "ownedBy": [{% for owner in entity | flattenOwners %}"{{owner.name}}"{% if not loop.last %},{% endif %}{% endfor %}],
+  {% if entity.polymorphicallyOwned %}
+  "ownerEntity": "String", "ownerId": "long"
+  {% else %}
+  "foreignKey": "{{entity.owners[0].name | uncapitalize}}Id"
+  {% endif %}
+}

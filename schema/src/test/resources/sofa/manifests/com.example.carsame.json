@@ -1,0 +1,24 @@
+{
+  "artifact": "com.example:carsame",
+  "schemas": [
+    "avro/car/Car.avsc"
+  ],
+  "generators": [
+    "templates-msg",
+    "templates-ent"
+  ],
+  "records": {
+    "com.example.car.Car": {
+      "templates-msg": {
+        "namespace": "com.example.car.messages",
+        "name": "Car",
+        "fullname": "com.example.car.messages.Car"
+      },
+      "templates-ent": {
+        "namespace": "com.example.car.entities",
+        "name": "CarEntity",
+        "fullname": "com.example.car.entities.CarEntity"
+      }
+    }
+  }
+}

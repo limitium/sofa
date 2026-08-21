@@ -10,6 +10,7 @@ public class Entity implements NamedEntity{
     String name;
     String fullName;
     Schema schema;
+    boolean external;
 
     public Entity(@Nonnull String namespace, @Nonnull String name, @Nonnull String fullName, @Nonnull Schema schema) {
         this.namespace = namespace;
@@ -32,6 +33,22 @@ public class Entity implements NamedEntity{
 
     public Schema getSchema() {
         return schema;
+    }
+
+    /**
+     * Checks whether this entity's class was produced by an imported library rather than by this run.
+     * <p>
+     * External entities take part in the graph and are referenced by templates like any other, but
+     * no file is written for them.
+     *
+     * @return true if the entity is borrowed from an import
+     */
+    public boolean isExternal() {
+        return external;
+    }
+
+    public void markExternal() {
+        this.external = true;
     }
 
     @Override

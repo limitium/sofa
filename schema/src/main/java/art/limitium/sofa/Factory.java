@@ -1,7 +1,11 @@
 package art.limitium.sofa;
 
 import art.limitium.sofa.config.FactoryConfig;
+import art.limitium.sofa.config.ManifestConfig;
+import art.limitium.sofa.imports.Imports;
+import art.limitium.sofa.imports.Manifest;
 import art.limitium.sofa.schema.Entity;
+import art.limitium.sofa.schema.SchemaAnnotations;
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import org.apache.avro.Schema;
@@ -70,15 +74,48 @@ public class Factory {
             throw new RuntimeException("Unable to load config file from " + configPath, e);
         }
 
-        logger.info("Loading schemas {}: \r\n{}", factoryConfig.schemas.size(), String.join("\r\n", factoryConfig.schemas));
+        logger.info("Local schemas {}: \r\n{}", factoryConfig.schemas.size(), String.join("\r\n", factoryConfig.schemas));
         List<String> pluginClasses = factoryConfig.plugins != null ? factoryConfig.plugins : List.of();
         TemplateEngineFactory templateEngines =
                 new TemplateEngineFactory(Factory.class.getClassLoader(), pluginClasses);
-        SchemaDefinition schemaDefinition = loadSchema(basePath, factoryConfig.schemas);
+        if (factoryConfig.imports != null && !factoryConfig.imports.isEmpty()) {
+            logger.info("Configured imports {}: \r\n{}", factoryConfig.imports.size(),
+                    String.join("\r\n", factoryConfig.imports));
+        }
+        Imports imports = Imports.load(Factory.class.getClassLoader(), factoryConfig.imports);
+
+        List<String> importedSpecs = imports.schemaSpecs();
+        List<String> schemaSpecs = new ArrayList<>(importedSpecs);
+        schemaSpecs.addAll(factoryConfig.schemas);
+        if (!importedSpecs.isEmpty()) {
+            logger.info("Imports contribute {} schemas, loaded ahead of the local ones: \r\n{}",
+                    importedSpecs.size(), String.join("\r\n", importedSpecs));
+        }
+        logger.info("Loading schemas {} in order: \r\n{}", schemaSpecs.size(), String.join("\r\n", schemaSpecs));
+
+        SchemaDefinition schemaDefinition = loadSchema(basePath, schemaSpecs);
         List<AvroEntity> roots = schemaDefinition.findRoots();
         logger.info("Found roots {}: \r\n{}", roots.size(), String.join("\r\n", roots.stream().map(AvroEntity::getFullname).toList()));
 
-        List<AvroEntity> scopeOfWork = convertTriesToUniqReverseRecords(schemaDefinition.roots);
+        List<AvroEntity> annotated = schemaDefinition.findAnnotatedRecords();
+        if (!annotated.isEmpty()) {
+            logger.info("Records pinning their role by annotation {}: \r\n{}", annotated.size(),
+                    String.join("\r\n", annotated.stream()
+                            .map(e -> e.getFullname() + " -> "
+                                    + (SchemaAnnotations.isPolymorphicallyOwned(e.schema)
+                                            ? SchemaAnnotations.OWNERSHIP + ": " + SchemaAnnotations.OWNERSHIP_POLYMORPHIC
+                                            : SchemaAnnotations.ROLE + ": " + SchemaAnnotations.ROLE_CHILD))
+                            .toList()));
+        }
+
+        List<AvroEntity> declaredEntryPoints = schemaDefinition.findDeclaredEntryPoints();
+        if (!declaredEntryPoints.isEmpty()) {
+            logger.info("Annotated records no root reaches, added to the scope of work {}: \r\n{}",
+                    declaredEntryPoints.size(),
+                    String.join("\r\n", declaredEntryPoints.stream().map(AvroEntity::getFullname).toList()));
+        }
+
+        List<AvroEntity> scopeOfWork = convertTriesToUniqReverseRecords(schemaDefinition.roots, declaredEntryPoints);
         logger.info("Scope of work sequence {}: \r\n{}", scopeOfWork.size(), String.join("\r\n", scopeOfWork.stream().map(AvroEntity::getFullname).toList()));
 
         Map<String, Map<String, Entity>> schemas = new HashMap<>();
@@ -118,7 +155,8 @@ public class Factory {
                     templateEngines.compileInlineTemplate(generatorConfig.postCall),
                     schemas,
                     valuesContext,
-                    templateEngines.getTemplateEvaluator());
+                    templateEngines.getTemplateEvaluator(),
+                    imports);
         }).toList();
 
 
@@ -126,6 +164,69 @@ public class Factory {
             logger.info("Start generator `{}`", generator.getName());
             generator.generate(scopeOfWork);
         }
+
+        if (factoryConfig.manifest != null) {
+            publishManifest(factoryConfig.manifest, generators, templateEngines, basePath);
+        }
+    }
+
+    /**
+     * Publishes what this module generated so downstream modules can reference it instead of
+     * regenerating their own copies.
+     * <p>
+     * Runs after every generator so the manifest covers the full set of produced artifacts.
+     *
+     * @param manifestConfig  Manifest section of the configuration
+     * @param generators      Generators that ran, in configuration order
+     * @param templateEngines Engines used to evaluate the manifest folder template
+     * @param basePath        Base directory of the configuration file
+     */
+    private static void publishManifest(
+            ManifestConfig manifestConfig,
+            List<Generator> generators,
+            TemplateEngineFactory templateEngines,
+            String basePath) {
+        if (manifestConfig.artifact == null || manifestConfig.artifact.isBlank()) {
+            throw new RuntimeException("`manifest.artifact` is required, expected a `groupId:artifactId` coordinate");
+        }
+
+        Manifest manifest = new Manifest();
+        manifest.artifact = manifestConfig.artifact;
+        manifest.schemas = manifestConfig.schemas != null ? manifestConfig.schemas : List.of();
+
+        for (Generator generator : generators) {
+            // Every generator that ran is listed, including ones that produced nothing. Consumers
+            // rely on this to tell "the library never ran this generator", where generating locally
+            // is correct, from "it ran and deliberately emitted nothing for this record", where the
+            // roles disagree between the modules and generating locally would duplicate a class.
+            manifest.generators.add(generator.getName());
+
+            Map<String, Entity> generated = generator.getGenerated();
+            if (generated.isEmpty()) {
+                logger.info("Manifest records no artifacts from generator `{}`", generator.getName());
+                continue;
+            }
+            logger.info("Manifest records {} artifacts from generator `{}`", generated.size(), generator.getName());
+            generated.forEach((recordFullname, entity) -> manifest.records
+                    .computeIfAbsent(recordFullname, k -> new LinkedHashMap<>())
+                    .put(generator.getName(),
+                            new Manifest.Artifact(entity.getNamespace(), entity.getName(), entity.getFullname())));
+        }
+
+        Map<String, String> context = new HashMap<>();
+        context.put("basePath", basePath);
+        String folder = manifestConfig.folder == null
+                ? basePath
+                : templateEngines.evaluateTemplateToString(
+                        templateEngines.compileInlineTemplate(manifestConfig.folder), context);
+        if (!folder.startsWith("/")) {
+            folder = basePath + "/" + folder;
+        }
+
+        Path manifestPath = Path.of(folder).resolve(Manifest.resourcePath(manifest.artifact));
+        manifest.write(manifestPath);
+        logger.info("Published manifest for `{}` with {} records across generators {} into {}",
+                manifest.artifact, manifest.records.size(), String.join(", ", manifest.generators), manifestPath);
     }
 
     private static Map<String, PebbleTemplate> loadMainTemplatesForGenerator(
@@ -216,19 +317,29 @@ public class Factory {
     }
 
     /**
-     * Converts a list of root AvroEntities into a flattened, reversed list with unique entries
+     * Converts roots and declared entry points into a flattened, dependency first list with unique entries
      * @param roots List of root AvroEntities
+     * @param declaredEntryPoints Annotated records no root reaches
      * @return Flattened and reversed list of AvroEntities
      */
-    private static List<AvroEntity> convertTriesToUniqReverseRecords(List<AvroEntity> roots) {
-        List<AvroEntity> reversedFlattedList = new ArrayList<>();
+    private static List<AvroEntity> convertTriesToUniqReverseRecords(
+            List<AvroEntity> roots, List<AvroEntity> declaredEntryPoints) {
         TriesToReverseListConverter<AvroEntity> triesToReverseListConverter = new TriesToReverseListConverter<>();
+        for (AvroEntity entryPoint : declaredEntryPoints) {
+            triesToReverseListConverter.addNode(entryPoint);
+        }
         for (AvroEntity root : roots) {
             triesToReverseListConverter.addNode(root);
         }
-        reversedFlattedList.addAll(triesToReverseListConverter.getFlatted());
-        reversedFlattedList.addAll(roots);
-        return reversedFlattedList;
+
+        // Dependencies first so record fields can resolve the entities they point at, then the
+        // entities nothing else reaches. putIfAbsent keeps the dependency ordered position of
+        // anything already flattened.
+        LinkedHashMap<String, AvroEntity> ordered = new LinkedHashMap<>();
+        triesToReverseListConverter.getFlatted().forEach(entity -> ordered.put(entity.getFullname(), entity));
+        declaredEntryPoints.forEach(entity -> ordered.putIfAbsent(entity.getFullname(), entity));
+        roots.forEach(entity -> ordered.putIfAbsent(entity.getFullname(), entity));
+        return List.copyOf(ordered.values());
     }
 
     /**

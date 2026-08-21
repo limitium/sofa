@@ -2,6 +2,7 @@
   "type": "root",
   "name": "Order",
   "namespace": "com.example.order",
+  "primaryKey": "orderId",
   "fields": {
     "orderId": "String",
     "customerInfo": {

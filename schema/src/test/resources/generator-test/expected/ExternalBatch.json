@@ -2,6 +2,7 @@
   "type": "root",
   "name": "ExternalBatch",
   "namespace": "com.example.external",
+  "primaryKey": "batchId",
   "fields": {
     "batchId": "String",
     "externalRecords": {

@@ -1,0 +1,10 @@
+{
+  "world": "entities", "type": "owner",
+  "class": "{{entity.namespace}}.{{entity.name}}",
+  "fields": {
+    {% for field in entity.fields | noRecordLists %}
+    "{{field.name}}": "{{field.type | javaType}}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  },
+  "ownedTypes": [{% for field in entity.fields | recordLists %}"{{field.type.elementType.record.name}}"{% if not loop.last %},{% endif %}{% endfor %}]
+}

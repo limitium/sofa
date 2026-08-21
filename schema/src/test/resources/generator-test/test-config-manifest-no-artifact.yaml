@@ -1,0 +1,14 @@
+schemas:
+  - schemas/record.avsc
+
+manifest:
+  folder: "published"
+
+generators:
+  - path: templates
+    templates:
+      namespace: "{{schema.namespace}}"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated"
+      filename: "{{name}}.json"

@@ -82,6 +82,9 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
      * @return true if this record owns other records through array fields, false otherwise
      */
     public boolean isOwner(){
+        if (SchemaAnnotations.suppressesOwner(getSchema())) {
+            return false;
+        }
         return fields.stream().anyMatch(f->f.type instanceof Type.ArrayType art && art.getElementType() instanceof Type.RecordType);
     }
 
@@ -91,6 +94,62 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
      */
     public boolean isDependent() {
         return !owners.isEmpty();
+    }
+
+    /**
+     * Checks whether this record is an entity owned by others, and so eligible for the dependent
+     * template.
+     * <p>
+     * True when something in this module owns it, or when it declares polymorphic ownership and is
+     * owned by records that may not exist yet. A declared composite is never an owned entity, even
+     * when several entities embed it.
+     *
+     * @return true if the record should be treated as an owned entity
+     */
+    public boolean isOwnedEntity() {
+        if (SchemaAnnotations.suppressesDependent(getSchema())) {
+            return false;
+        }
+        return !owners.isEmpty() || SchemaAnnotations.isPolymorphicallyOwned(getSchema());
+    }
+
+    /**
+     * Checks whether ownership must be represented polymorphically rather than as a named foreign key.
+     * <p>
+     * True when the schema declares it, and also when more than one entity reaches the record, where
+     * a single named foreign key cannot express the relation.
+     * <p>
+     * Distinct from {@link #isOwnedEntity()}: this answers how an owned entity's link is shaped, not
+     * whether the record is an owned entity at all.
+     *
+     * @return true if ownership must be represented polymorphically
+     */
+    public boolean isPolymorphicallyOwned() {
+        return SchemaAnnotations.isPolymorphicallyOwned(getSchema()) || getFlattenOwners().size() > 1;
+    }
+
+    /**
+     * Walks up the parent chain to the nearest records that are themselves roots or dependents.
+     * <p>
+     * Intermediate composites are transparent: a record embedded in a composite is owned by whatever
+     * owns that composite.
+     *
+     * @return The owning entities, deduplicated
+     */
+    public List<RecordEntity> getFlattenOwners() {
+        Set<RecordEntity> flatten = new HashSet<>();
+        collectFlattenOwners(parents, flatten);
+        return flatten.stream().toList();
+    }
+
+    private void collectFlattenOwners(Set<RecordEntity> from, Set<RecordEntity> collected) {
+        from.forEach(parent -> {
+            if (parent.isDependent() || parent.isRoot()) {
+                collected.add(parent);
+            } else {
+                collectFlattenOwners(parent.getParents(), collected);
+            }
+        });
     }
 
     /**
@@ -106,14 +165,24 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
      */
     public record Field(
             String name,
-            Type type
+            Type type,
+            boolean primary
     ) {
+        public Field(String name, Type type) {
+            this(name, type, false);
+        }
+
         /**
-         * Checks if this field is marked as primary key
+         * Checks if this field is marked as primary key.
+         * <p>
+         * Avro accepts the marker in two places and both are honoured: on the field itself
+         * ({@code {"name": "id", "type": "string", "primary": true}}) and inside the field's type
+         * ({@code {"name": "id", "type": {"type": "string", "primary": true}}}).
+         *
          * @return true if primary key, false otherwise
          */
         public boolean isPrimary() {
-            return type.getProperty("primary") != null && (Boolean) type.getProperty("primary");
+            return primary || Boolean.TRUE.equals(type.getProperty("primary"));
         }
     }
 

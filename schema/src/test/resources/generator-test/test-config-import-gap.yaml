@@ -1,0 +1,14 @@
+imports:
+  - "com.example:engine-lib"
+
+schemas:
+  - schemas/car-with-engine.avsc
+
+generators:
+  - path: templates
+    templates:
+      namespace: "{{schema.namespace}}"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated"
+      filename: "{{name}}.json"

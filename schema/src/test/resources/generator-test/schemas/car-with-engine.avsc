@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "Coupe",
+  "namespace": "com.example.showroom",
+  "fields": [
+    {
+      "name": "coupeId",
+      "type": "string",
+      "primary": true
+    },
+    {
+      "name": "engine",
+      "type": "com.example.car.Engine"
+    }
+  ]
+}

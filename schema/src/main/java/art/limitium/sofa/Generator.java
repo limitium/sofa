@@ -1,9 +1,12 @@
 package art.limitium.sofa;
 
 import art.limitium.sofa.config.FiltersConfig;
+import art.limitium.sofa.imports.Imports;
+import art.limitium.sofa.imports.Manifest;
 import art.limitium.sofa.schema.Entity;
 import art.limitium.sofa.schema.EnumEntity;
 import art.limitium.sofa.schema.RecordEntity;
+import art.limitium.sofa.schema.SchemaAnnotations;
 import art.limitium.sofa.schema.Type;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import org.apache.avro.Schema;
@@ -26,6 +29,8 @@ public class Generator {
     private final Map<String, String> valuesContext;
     private final String basePath;
     private final TemplateEvaluator templateEvaluator;
+    private final Imports imports;
+    private final Map<String, Entity> generated = new LinkedHashMap<>();
     private String folder;
 
     /**
@@ -39,6 +44,7 @@ public class Generator {
      * @param postCall Template for post-generation command
      * @param schemas Map of schema name to entities
      * @param valuesContext Context values for template evaluation
+     * @param imports Generated code published by imported libraries
      */
     public Generator(
             String name,
@@ -49,7 +55,8 @@ public class Generator {
             PebbleTemplate postCall,
             Map<String, Map<String, Entity>> schemas,
             Map<String, String> valuesContext,
-            TemplateEvaluator templateEvaluator) {
+            TemplateEvaluator templateEvaluator,
+            Imports imports) {
         this.name = name;
         this.mainTemplates = mainTemplates;
         this.templates = templates;
@@ -60,6 +67,7 @@ public class Generator {
         this.valuesContext = valuesContext;
         this.basePath = valuesContext.get("basePath");
         this.templateEvaluator = templateEvaluator;
+        this.imports = imports;
     }
 
     /**
@@ -99,17 +107,26 @@ public class Generator {
             }
             boolean shouldBeGenerated = shouldBeGenerated(avroEntity);
 
-            String namespace = generateNamespace(avroEntity.schema);
-            String name = generateName(avroEntity.schema);
+            String role = resolveRole(avroEntity);
+            String namespace = generateNamespace(avroEntity.schema, role);
+            String name = generateName(avroEntity.schema, role);
 
-            if (overrides != null && (!shouldBeGenerated || isSkipWrite(avroEntity.schema))) {
+            Manifest.Artifact imported = imports.resolve(avroEntity.getFullname(), this.name);
+            if (imported != null) {
+                Factory.logger.info("Take entity `{}` from import `{}` as `{}`",
+                        avroEntity.getFullname(), imports.publishersOf(avroEntity.getFullname()), imported.fullname);
+                namespace = imported.namespace;
+                name = imported.name;
+            } else if (overrides != null && (!shouldBeGenerated || isSkipWrite(avroEntity.schema))) {
                 Factory.logger.info("Take entity `{}` from `{}`", avroEntity.getFullname(), overrides);
                 Entity parentEntity = schemas.get(overrides).get(avroEntity.getFullname());
                 namespace = parentEntity.getNamespace();
                 name = parentEntity.getName();
             }
 
-            String fullname = generateFullname(namespace, name, avroEntity.schema);
+            String fullname = imported != null
+                    ? imported.fullname
+                    : generateFullname(namespace, name, avroEntity.schema, role);
 
             Factory.logger.debug("Create entity `{}` at `{}` with `{}`", name, namespace, fullname);
 
@@ -124,12 +141,15 @@ public class Generator {
                 for (Schema.Field field : avroEntity.schema.getFields()) {
                     Type type = Type.fromSchema(field.schema(), mapByAvroName);
                     Factory.logger.debug("Create field `{}` from type `{}` to `{}`", field.name(), field.schema().getType(), type);
-                    fields.add(new RecordEntity.Field(field.name(), type));
+                    fields.add(new RecordEntity.Field(field.name(), type, SchemaAnnotations.isPrimary(field)));
                 }
                 entity = new RecordEntity(namespace, name, fullname, avroEntity.schema, fields, avroEntity.isRoot);
             }
 
             if (entity != null) {
+                if (imported != null) {
+                    entity.markExternal();
+                }
                 entities.put(entity.getFullname(), entity);
                 mapByAvroName.put(avroEntity.getFullname(), entity);
             }
@@ -137,7 +157,13 @@ public class Generator {
 
         schemas.put(name, mapByAvroName);
 
-        Factory.logger.info("{} Entities created", entities.size());
+        long borrowed = entities.values().stream().filter(Entity::isExternal).count();
+        if (borrowed > 0) {
+            Factory.logger.info("{} Entities created for `{}`, {} of them borrowed from imports",
+                    entities.size(), name, borrowed);
+        } else {
+            Factory.logger.info("{} Entities created for `{}`", entities.size(), name);
+        }
 
         for (AvroEntity avroEntity : avroEntities) {
             Entity entity = mapByAvroName.get(avroEntity.getFullname());
@@ -186,9 +212,16 @@ public class Generator {
                         mapByAvroName.get(avroEntity.getFullname()),
                         "Entity is missing for `" + avroEntity.getFullname() + "`"))
                 .filter(this::hasApplicableTemplate)
+                .filter(this::isNotProvidedByImport)
                 .toList();
 
+        toGenerate.forEach(entity -> generated.put(entity.getSchema().getFullName(), entity));
+
+        Factory.logger.info("Generator `{}` will write {} of {} entities in scope", name, toGenerate.size(), entities.size());
+
         List<String> files = toGenerate.stream().map(this::generateFor).toList();
+
+        Factory.logger.info("Generator `{}` wrote {} files", name, files.size());
 
         String postCall = generatePostCall(files);
         if (postCall != null) {
@@ -224,7 +257,8 @@ public class Generator {
         if ((mainTemplates.containsKey("enum") && entity.schema.getType() == Schema.Type.ENUM)
                 || (mainTemplates.containsKey("root") && entity.schema.getType() == Schema.Type.RECORD && entity.isRoot)
                 || (mainTemplates.containsKey("owner") && entity.schema.getType() == Schema.Type.RECORD && entity.isOwner())
-                || (mainTemplates.containsKey("dependent") && entity.schema.getType() == Schema.Type.RECORD && !entity.owners.isEmpty())
+                || (mainTemplates.containsKey("dependent") && entity.schema.getType() == Schema.Type.RECORD
+                        && entity.isOwnedEntity())
                 || (mainTemplates.containsKey("child") && entity.schema.getType() == Schema.Type.RECORD && !entity.isRoot)
                 || mainTemplates.containsKey("record")
         ) {
@@ -233,6 +267,42 @@ public class Generator {
 
         Factory.logger.info("Skip entity `{}` no proper template", entity.getFullname());
         return false;
+    }
+
+    /**
+     * Resolves which role this generator will treat a record as, before any file is written.
+     * <p>
+     * Exposed to the namespace, name and fullname templates as {@code role} so naming can follow the
+     * role rather than the generator. A composite and an entity produced by the same generator can
+     * then be named differently, for instance {@code Garage} alongside {@code CarEntity}.
+     * <p>
+     * Mirrors the template selection ladder, and is resolved from the Avro entity because naming
+     * happens before relations are wired.
+     *
+     * @param entity The entity being named
+     * @return The role name, or {@code none} when this generator has no template for it
+     */
+    private String resolveRole(AvroEntity entity) {
+        boolean isRecord = entity.schema.getType() == Schema.Type.RECORD;
+        if (mainTemplates.containsKey("enum") && entity.schema.getType() == Schema.Type.ENUM) {
+            return "enum";
+        }
+        if (mainTemplates.containsKey("root") && isRecord && entity.isRoot) {
+            return "root";
+        }
+        if (mainTemplates.containsKey("owner") && isRecord && entity.isOwner()) {
+            return "owner";
+        }
+        if (mainTemplates.containsKey("dependent") && isRecord && entity.isOwnedEntity()) {
+            return "dependent";
+        }
+        if (mainTemplates.containsKey("child") && isRecord && !entity.isRoot) {
+            return "child";
+        }
+        if (mainTemplates.containsKey("record") && isRecord) {
+            return "record";
+        }
+        return "none";
     }
 
     private boolean isBlacklisted(Schema schema) {
@@ -301,7 +371,7 @@ public class Generator {
             } else if (mainTemplates.containsKey("owner") && recordEntity.isOwner()) {
                 Factory.logger.info("Generate owner {} into {}", recordEntity.getFullname(), fullFileName);
                 template = mainTemplates.get("owner");
-            } else if (mainTemplates.containsKey("dependent") && !recordEntity.getOwners().isEmpty()) {
+            } else if (mainTemplates.containsKey("dependent") && recordEntity.isOwnedEntity()) {
                 Factory.logger.info("Generate dependent {} into {}", recordEntity.getFullname(), fullFileName);
                 template = mainTemplates.get("dependent");
             } else if (mainTemplates.containsKey("child") && !recordEntity.isRoot()) {
@@ -331,6 +401,49 @@ public class Generator {
         return fullFileName;
     }
 
+    /**
+     * Applies the import rules to an entity this generator would otherwise write.
+     * <p>
+     * Three outcomes, keyed on whether the publishing library ran this generator at all:
+     * <ul>
+     *     <li>the import published an artifact for it - reference that, write nothing;</li>
+     *     <li>the import ran this generator but published nothing for this record - fail, because the
+     *     record resolved to different roles in the two modules and generating locally would produce a
+     *     second class for something the library already owns;</li>
+     *     <li>the import never ran this generator - generate locally, there is nothing to collide with.</li>
+     * </ul>
+     *
+     * @param entity The entity about to be written
+     * @return true if this generator should write the entity itself
+     */
+    private boolean isNotProvidedByImport(Entity entity) {
+        String recordFullname = entity.getSchema().getFullName();
+        if (!imports.covers(recordFullname)) {
+            return true;
+        }
+        if (entity.isExternal()) {
+            Factory.logger.info("Skip writing entity `{}`, provided by import as `{}`", recordFullname, entity.getFullname());
+            return false;
+        }
+        if (imports.ranGenerator(this.name)) {
+            throw new RuntimeException("Import `" + imports.publishersOf(recordFullname) + "` ran generator `"
+                    + this.name + "` but published no artifact for `" + recordFullname + "`, while this module needs one."
+                    + " The record resolves to different roles in the two modules; pin it in the schema with"
+                    + " `\"role\": \"child\"` or `\"ownership\": \"polymorphic\"` and republish the library");
+        }
+        Factory.logger.info("Generate `{}` locally, no import ran generator `{}`", recordFullname, this.name);
+        return true;
+    }
+
+    /**
+     * Entities this generator actually wrote a file for, keyed by Avro record fullname
+     *
+     * @return Written entities, for manifest publication
+     */
+    public Map<String, Entity> getGenerated() {
+        return generated;
+    }
+
     private boolean hasApplicableTemplate(Entity entity) {
         if (entity instanceof EnumEntity) {
             return mainTemplates.containsKey("enum");
@@ -338,7 +451,7 @@ public class Generator {
         RecordEntity recordEntity = (RecordEntity) entity;
         return (mainTemplates.containsKey("root") && recordEntity.isRoot())
                 || (mainTemplates.containsKey("owner") && recordEntity.isOwner())
-                || (mainTemplates.containsKey("dependent") && !recordEntity.getOwners().isEmpty())
+                || (mainTemplates.containsKey("dependent") && recordEntity.isOwnedEntity())
                 || (mainTemplates.containsKey("child") && !recordEntity.isRoot())
                 || mainTemplates.containsKey("record");
     }
@@ -367,10 +480,11 @@ public class Generator {
      * @param schema The schema to generate a name for
      * @return The generated name
      */
-    private String generateName(Schema schema) {
+    private String generateName(Schema schema, String role) {
         String name = schema.getName();
         if (templates.name != null) {
-            name = templateEvaluator.evaluateToString(templates.name, extendValuesContext(Collections.singletonMap("schema", schema)));
+            name = templateEvaluator.evaluateToString(
+                    templates.name, extendValuesContext(Map.of("schema", schema, "role", role)));
         }
         return name;
     }
@@ -381,11 +495,11 @@ public class Generator {
      * @param schema The schema to generate a namespace for
      * @return The generated namespace
      */
-    private String generateNamespace(Schema schema) {
+    private String generateNamespace(Schema schema, String role) {
         String namespace = schema.getNamespace();
         if (templates.namespace != null) {
             namespace = templateEvaluator.evaluateToString(
-                    templates.namespace, extendValuesContext(Collections.singletonMap("schema", schema)));
+                    templates.namespace, extendValuesContext(Map.of("schema", schema, "role", role)));
         }
         return namespace;
     }
@@ -398,12 +512,13 @@ public class Generator {
      * @param schema The schema
      * @return The generated full name
      */
-    private String generateFullname(String namespace, String name, Schema schema) {
+    private String generateFullname(String namespace, String name, Schema schema, String role) {
         String fullname = namespace + "." + name;
         if (templates.namespace != null) {
             fullname = templateEvaluator.evaluateToString(
                     templates.fullname,
-                    extendValuesContext(Map.of("namespace", namespace, "name", name, "schema", schema)));
+                    extendValuesContext(
+                            Map.of("namespace", namespace, "name", name, "schema", schema, "role", role)));
         }
         return fullname;
     }

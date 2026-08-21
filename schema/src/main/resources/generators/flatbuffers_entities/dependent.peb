@@ -10,13 +10,13 @@ table {{ entity.name }}{
     {% endfor %}
 
     {% set owners = entity | flattenOwners %}
-    {% if owners.size > 0 %}
+    {% if owners.size > 0 or entity.polymorphicallyOwned %}
 
             //Links do dependents {{ owners.size }} total
-        {% if owners.size == 1 %}
+        {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             {{ owners[0].name | toSnakeCase | lower }}_id: {{  owners[0].primaryKey.type | fbType }};
         {% endif %}
-        {% if owners.size > 1 %}
+        {% if entity.polymorphicallyOwned %}
             //{% for owner in owners %}{{ owner.name }},{% endfor %}
 
             owner_entity: string;

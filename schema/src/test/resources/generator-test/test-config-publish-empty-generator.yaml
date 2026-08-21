@@ -1,0 +1,27 @@
+# Product is a root, so the common generator (child + enum only) matches nothing.
+# Its path must still be published, otherwise consumers cannot tell it ran.
+schemas:
+  - schemas/record.avsc
+
+manifest:
+  artifact: "com.example:emptygen"
+  folder: "published"
+  schemas:
+    - "avro/product/Product.avsc"
+
+generators:
+  - path: templates-common
+    templates:
+      namespace: "{{schema.namespace}}.common.pojo"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/common"
+      filename: "{{name}}.json"
+
+  - path: templates-entities
+    templates:
+      namespace: "{{schema.namespace}}.entities.pojo"
+      name: "{{schema.name}}Entity"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

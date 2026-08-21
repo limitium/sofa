@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GeneratorsTest {
     @TempDir
@@ -35,6 +36,26 @@ class GeneratorsTest {
         Class<?> aClass = compiledClassLoader.loadClass("com.example.avro5.entities.builder.Root5Builder");
         assertNotNull(aClass);
         System.out.println("Successfully loaded class: " + aClass.getName());
+    }
+
+    @Test
+    void shouldTypePolymorphicOwnerColumnsToMatchTheGeneratedPojo() throws IOException {
+        // Given the real schema set, where NestedRecord is reachable from more than one owner
+        Factory.main(new String[]{"src/main/resources/def.yaml"});
+
+        // When
+        String pojo = Files.readString(Path.of(
+                "build/generated/sources/java/main/com/example/avro/entities/pojo/NestedRecord.java"));
+        String table = Files.readString(Path.of(
+                "build/generated/sources/liquibase/1.0-create-table-COM.EXAMPLE.AVRO.ENTITIES.LIQUIBASE_NESTEDRECORD.xml"));
+
+        // Then the polymorphic owner pair is emitted, and the SQL types match the Java types
+        assertTrue(pojo.contains("public String ownerEntity;"), "Expected String ownerEntity in the pojo");
+        assertTrue(pojo.contains("public long ownerId;"), "Expected long ownerId in the pojo");
+        assertTrue(table.contains("<column name=\"OWNER_ENTITY\" type=\"varchar2(255)\" />"),
+                "OWNER_ENTITY backs a String and must not be numeric: " + table);
+        assertTrue(table.contains("<column name=\"OWNER_ID\" type=\"bigint\" />"),
+                "OWNER_ID backs a long and must not be a varchar: " + table);
     }
 
     private void compileAndLoadGeneratedJavaFiles() throws IOException {

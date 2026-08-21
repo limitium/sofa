@@ -2,6 +2,7 @@
   "type": "root",
   "name": "Product",
   "namespace": "com.example.product",
+  "primaryKey": "productId",
   "fields": {
     "productId": "String",
     "name": "String",

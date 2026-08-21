@@ -1,0 +1,26 @@
+# Module A: publishes Car through the same two generator paths its consumers use.
+schemas:
+  - schemas/polymorphic.avsc
+
+manifest:
+  artifact: "com.example:carlib"
+  folder: "published"
+  schemas:
+    - "avro/car/Car.avsc"
+
+generators:
+  - path: templates-common
+    templates:
+      namespace: "{{schema.namespace}}.common.pojo"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/common"
+      filename: "{{name}}.json"
+
+  - path: templates-entities
+    templates:
+      namespace: "{{schema.namespace}}.entities.pojo"
+      name: "{{schema.name}}Entity"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

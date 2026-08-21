@@ -1,0 +1,12 @@
+schemas:
+  - schemas/polymorphic.avsc
+  - schemas/composite.avsc
+
+generators:
+  - path: templates
+    templates:
+      namespace: "{{schema.namespace}}"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated"
+      filename: "{{name}}.json"

@@ -2,6 +2,7 @@
   "type": "root",
   "name": "Cart",
   "namespace": "com.example.cart",
+  "primaryKey": "cartId",
   "fields": {
     "cartId": "String",
     "items": {

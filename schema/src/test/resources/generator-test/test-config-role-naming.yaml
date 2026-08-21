@@ -1,0 +1,23 @@
+# Naming follows the role, not the generator: composites keep their plain name and live in
+# `inner`, entities take the `Entity` suffix.
+schemas:
+  - schemas/polymorphic.avsc
+  - schemas/yard2-building.avsc
+  - schemas/yard2-angar.avsc
+
+generators:
+  - path: templates-msg
+    templates:
+      namespace: "{{schema.namespace}}.messages"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/messages"
+      filename: "{{name}}.json"
+
+  - path: templates-ent
+    templates:
+      namespace: "{{schema.namespace}}.entities"
+      name: "{{schema.name}}{% if role != 'child' %}Entity{% endif %}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "Engine",
+  "namespace": "com.example.car",
+  "role": "child",
+  "fields": [
+    {
+      "name": "serial",
+      "type": "string"
+    },
+    {
+      "name": "horsePower",
+      "type": "int"
+    }
+  ]
+}

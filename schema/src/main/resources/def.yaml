@@ -150,8 +150,9 @@ generators:
     templates:
       filename: "{{ fullname }}.puml"
       folder: "{{outputPath}}/puml"
+    # postCall is tokenized on whitespace and run without a shell, so no quoting and no redirects
     postCall: >-
       /usr/bin/curl -fsS -X POST http://localhost:8081/svg
-      -H 'Content-Type: text/plain; charset=utf-8'
+      -H Content-Type:text/plain;charset=utf-8
       --data-binary @{{outputPath}}/puml/schema.puml
-      -o {{outputPath}}/puml/schema.svg 2>/dev/null
+      -o {{outputPath}}/puml/schema.svg

@@ -309,6 +309,13 @@ can be named `Garage` in both without colliding: `messages.Garage` carries its r
 
 The role is resolved before relations are wired, from the same ladder used to pick the template.
 
+Schema wide templates such as `schema.peb` see the same ladder without the template gating, through
+`entity.role` for the most specific role and `entity.roles` for every role the record qualifies for,
+most specific first. A generator narrows `roles` to the templates it provides, while a consumer that
+renders every record alike takes `role`. The bundled `puml` generator uses it for its stereotypes,
+so a diagram distinguishes `<<root>>`, `<<owner>>`, `<<dependent>>` and `<<child>>` rather than
+labelling everything that is not a root a plain record.
+
 ## Schema Annotations
 
 Roles like root, child and dependent are inferred from the dependency graph, which means they are a

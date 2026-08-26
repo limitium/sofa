@@ -21,12 +21,23 @@ public class SchemaDefinition {
      */
     Map<String, AvroEntity> records = new HashMap<>();
 
+    /**
+     * Registers a record and walks its fields to wire dependencies and 1-N ownership.
+     * <p>
+     * A record reached again, either from another parent or from itself, returns the entity already
+     * registered without a second walk. Walking twice would add the same owner to an owned record
+     * once per path, which shows up as duplicated relations downstream, and a record referencing
+     * itself would never stop.
+     */
     public AvroEntity addRecord(Schema schema) {
+        AvroEntity known = records.get(schema.getFullName());
+        if (known != null) {
+            return known;
+        }
 
-        AvroEntity avroEntity = records.computeIfAbsent(schema.getFullName(), s -> {
-            SchemaAnnotations.validate(schema);
-            return new AvroEntity(schema);
-        });
+        SchemaAnnotations.validate(schema);
+        AvroEntity avroEntity = new AvroEntity(schema);
+        records.put(schema.getFullName(), avroEntity);
 
         if (schema.getType() == Schema.Type.RECORD) {
             for (Schema.Field field : schema.getFields()) {

@@ -44,6 +44,24 @@ skinparam class<<owner>> {
     StereotypeFontColor #0066CC
 }
 
+' Dependent class style, an entity linked back to whatever owns it
+skinparam class<<dependent>> {
+    BackgroundColor #FFF3E0
+    BorderColor #CC6600
+    ArrowColor #CC6600
+    FontColor #333333
+    StereotypeFontColor #CC6600
+}
+
+' Child class style, a composite inlined into its parent
+skinparam class<<child>> {
+    BackgroundColor #F3F0FA
+    BorderColor #7755AA
+    ArrowColor #7755AA
+    FontColor #333333
+    StereotypeFontColor #7755AA
+}
+
 ' Regular record style
 skinparam class<<record>> {
     BackgroundColor #FFFFFF
@@ -53,8 +71,17 @@ skinparam class<<record>> {
     StereotypeFontColor #666666
 }
 
-' Enum styles
+' Enum styles. Enums carry the <<enum>> stereotype, and a stereotyped element resolves against
+' `class<<...>>`, so the bare `enum` block alone never reaches them
 skinparam enum {
+    BackgroundColor #F0F8FF
+    BorderColor #4682B4
+    ArrowColor #4682B4
+    FontColor #333333
+    StereotypeFontColor #4682B4
+}
+
+skinparam class<<enum>> {
     BackgroundColor #F0F8FF
     BorderColor #4682B4
     ArrowColor #4682B4
@@ -90,26 +117,16 @@ skinparam maxMessageSize 100
 {% for entity in entities %}
 {% if entity.schema.getType().name() == 'record' %}
 {% set name = entity.getFullname() %}
-    class {{ name }}
-        {% if entity.isRoot %}
-        <<root>> {
-        {% elseif entity.isOwner() %}
-        <<owner>> {
-        {% else %}
-        <<record>> {
-        {% endif %}
+    class {{ name }} <<{{ entity.role }}>> {
         {% for field in entity.schema.getFields() %}
-        {% if field.schema().getType().name() == 'record' %}
-        + {{ field.name() | toCamelCase }}: {{ field.schema().getFullName() }}
-        {% elseif field.schema().getType().name() == 'array' %}
-        + {{ field.name() | toCamelCase }}: List<{{ field.schema().getElementType().getFullName() }}>
-        {% elseif field.schema().getType().name() == 'map' %}
-        + {{ field.name() | toCamelCase }}: Map<String, {{ field.schema().getValueType().getFullName() }}>
-        {% elseif field.schema().getType().name() == 'enum' %}
-        + {{ field.name() | toCamelCase }}: {{ field.schema().getFullName() }}
-        {% else %}
-        + {{ field.name() | toCamelCase }}: {{ field.schema() | javaType }}
+        {% if field.schema().getType().name() == 'record' %}{% set type = field.schema().getFullName() %}
+        {% elseif field.schema().getType().name() == 'array' %}{% set type = "List<" ~ field.schema().getElementType().getFullName() ~ ">" %}
+        {% elseif field.schema().getType().name() == 'map' %}{% set type = "Map<String, " ~ field.schema().getValueType().getFullName() ~ ">" %}
+        {% elseif field.schema().getType().name() == 'enum' %}{% set type = field.schema().getFullName() %}
+        {% elseif field.schema().getLogicalType() is not null %}{% set type = field.schema().getType().getName() ~ " [" ~ field.schema().getLogicalType().getName() ~ "]" %}
+        {% else %}{% set type = field.schema().getType().getName() %}
         {% endif %}
+        + {{ field.name() | toCamelCase }}: {{ type }}
 
         {% endfor %}
     }

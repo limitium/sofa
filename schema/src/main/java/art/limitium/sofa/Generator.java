@@ -230,11 +230,24 @@ public class Generator {
             }
             Factory.logger.info("Run postCall: {}", postCall);
             try {
-                Process exec = Runtime.getRuntime().exec(postCall);
+                // Tokenized on whitespace and run without a shell, so quoting and redirects do not apply.
+                // stderr is merged in, otherwise a command that fills the error pipe blocks forever while
+                // we wait on its output.
+                Process exec = new ProcessBuilder(postCall.trim().split("\\s+"))
+                        .redirectErrorStream(true)
+                        .start();
                 String out = new String(exec.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-                Factory.logger.info("Output: {}", out);
+                int exitCode = exec.waitFor();
+                if (exitCode != 0) {
+                    Factory.logger.warn("postCall for generator `{}` exited with {}: {}", name, exitCode, out);
+                } else if (!out.isBlank()) {
+                    Factory.logger.info("Output: {}", out);
+                }
             } catch (IOException e) {
                 throw new RuntimeException("Unable to run postCall", e);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Interrupted while waiting for postCall", e);
             }
         }
     }
@@ -283,26 +296,10 @@ public class Generator {
      * @return The role name, or {@code none} when this generator has no template for it
      */
     private String resolveRole(AvroEntity entity) {
-        boolean isRecord = entity.schema.getType() == Schema.Type.RECORD;
-        if (mainTemplates.containsKey("enum") && entity.schema.getType() == Schema.Type.ENUM) {
-            return "enum";
-        }
-        if (mainTemplates.containsKey("root") && isRecord && entity.isRoot) {
-            return "root";
-        }
-        if (mainTemplates.containsKey("owner") && isRecord && entity.isOwner()) {
-            return "owner";
-        }
-        if (mainTemplates.containsKey("dependent") && isRecord && entity.isOwnedEntity()) {
-            return "dependent";
-        }
-        if (mainTemplates.containsKey("child") && isRecord && !entity.isRoot) {
-            return "child";
-        }
-        if (mainTemplates.containsKey("record") && isRecord) {
-            return "record";
-        }
-        return "none";
+        return entity.getRoles().stream()
+                .filter(mainTemplates::containsKey)
+                .findFirst()
+                .orElse("none");
     }
 
     private boolean isBlacklisted(Schema schema) {

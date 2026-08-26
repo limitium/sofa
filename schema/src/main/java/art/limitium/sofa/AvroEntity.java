@@ -112,4 +112,48 @@ public class AvroEntity implements Owner<AvroEntity>, Dependency<AvroEntity>, Na
         }
         return !owners.isEmpty() || SchemaAnnotations.isPolymorphicallyOwned(schema);
     }
+
+    /**
+     * Lists the roles this entity qualifies for, most specific first.
+     * <p>
+     * This is the template selection ladder without the templates: it says what the record is, not
+     * what a given generator can render it as. A generator narrows the list to the roles it has a
+     * template for, while consumers that render every record alike, such as a diagram, take the
+     * first entry.
+     *
+     * @return The roles, most specific first, empty for anything that is neither record nor enum
+     */
+    public List<String> getRoles() {
+        if (schema.getType() == Schema.Type.ENUM) {
+            return List.of("enum");
+        }
+        if (schema.getType() != Schema.Type.RECORD) {
+            return List.of();
+        }
+        List<String> roles = new ArrayList<>();
+        if (isRoot) {
+            roles.add("root");
+        }
+        if (isOwner()) {
+            roles.add("owner");
+        }
+        if (isOwnedEntity()) {
+            roles.add("dependent");
+        }
+        if (!isRoot) {
+            roles.add("child");
+        }
+        roles.add("record");
+        return roles;
+    }
+
+    /**
+     * The most specific role this entity qualifies for, regardless of any generator's templates
+     *
+     * @return The role name, or {@code none} when the entity holds no role
+     */
+    public String getRole() {
+        List<String> roles = getRoles();
+        return roles.isEmpty() ? "none" : roles.get(0);
+    }
 }

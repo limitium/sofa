@@ -22,10 +22,10 @@ dependencies {
     implementation "com.google.code.gson:gson:2.11.0"
 
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.11.4'
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
     testImplementation 'org.instancio:instancio-junit:5.4.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.11.4'
 
     // Optional drop-in plugins: put jars into schema/libs/*.jar
     runtimeOnly fileTree(dir: "${projectDir}/libs", include: ["*.jar"])

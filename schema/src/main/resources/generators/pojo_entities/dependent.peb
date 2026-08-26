@@ -68,7 +68,7 @@ public class {{ entity.name }}{
                 return this.ownerEntity;
             }
 
-            public long getOwnerId(long val){
+            public long getOwnerId(){
                 return this.ownerId;
             }
         {% endif %}

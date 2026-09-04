@@ -1,0 +1,143 @@
+# The production generator set, run over a graph that has carriers in it:
+#
+#   Building -> [Level] -> Zone -> Garage -> [Car]
+#   Angar              -> Zone -> Garage -> [Car]
+#
+# Zone and Garage are carriers, Address/Dimensions/Toolbox are composites that reach no collection.
+# Every generator has to agree on which class a carrier is, so they all run together here. postCall
+# is dropped from each generator: flatc and the plantuml server are not part of what this checks.
+values:
+  outputPath: "{{basePath}}/generated"
+
+schemas:
+  - schemas/polymorphic.avsc
+  - schemas/yard3-building.avsc
+  - schemas/yard3-angar.avsc
+
+generators:
+  - path: "flatbuffers_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.fb"
+      name: "Fb{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname }}.fbs"
+      folder: "{{outputPath}}/fbs"
+  - path: "flatbuffers_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.fb"
+      name: "Fb{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname }}.fbs"
+      folder: "{{outputPath}}/fbs"
+    overrides: "flatbuffers_messages"
+  - path: "pojo_common"
+    templates:
+      namespace: "{{ schema.namespace }}.common.pojo"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "pojo_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.pojo"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+    overrides: "pojo_common"
+  - path: "pojo_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.pojo"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+    overrides: "pojo_common"
+  - path: "builder_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.builder"
+      name: "{{ schema.name }}Builder"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "builder_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.builder"
+      name: "{{ schema.name }}Builder"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "serde_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.serde"
+      name: "{{ schema.name }}Serde"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "serde_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.serde"
+      name: "{{ schema.name }}Serde"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "converter_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.converter"
+      name: "{{ schema.name }}Converter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "converter_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.converter"
+      name: "{{ schema.name }}Converter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "converter_wrapped_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.converter.wrapped"
+      name: "{{ schema.name }}WrappedConverter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "converter_wrapped_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.converter.wrapped"
+      name: "{{ schema.name }}WrappedConverter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "converter_dlq_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.converter.dlq"
+      name: "{{ schema.name }}DLQEnvelopeWrappedConverter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "converter_dlq_value_only_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.converter.dlq"
+      name: "Only{{ schema.name }}DLQEnvelopeWrappedConverter"
+      fullname: "{{ namespace }}.{{ name }}"
+      filename: "{{ fullname | replace({'.':'/'}) }}.java"
+      folder: "{{outputPath}}/java/main"
+  - path: "liquibase_messages"
+    templates:
+      namespace: "{{ schema.namespace }}.messages.liquibase"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace | toSnakeCase }}_{{ name }}"
+      filename: "1.0-create-table-{{ fullname | upper }}.xml"
+      folder: "{{outputPath}}/liquibase"
+  - path: "liquibase_entities"
+    templates:
+      namespace: "{{ schema.namespace }}.entities.liquibase"
+      name: "{{ schema.name }}"
+      fullname: "{{ namespace | toSnakeCase }}_{{ name }}"
+      filename: "1.0-create-table-{{ fullname | upper }}.xml"
+      folder: "{{outputPath}}/liquibase"
+  - path: "puml"
+    templates:
+      filename: "{{ fullname }}.puml"
+      folder: "{{outputPath}}/puml"

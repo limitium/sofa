@@ -157,8 +157,9 @@ class SchemaDefinitionTest {
 
         assertEquals("root", roleOf(definition, "com.example.yard.Building"));
         assertEquals("root", roleOf(definition, "com.example.yard.Angar"));
-        // The composite is pinned out of owner-ness by its annotation, so it stays a child
-        assertEquals("child", roleOf(definition, "com.example.yard.Garage"));
+        // The composite is pinned out of owner-ness by its annotation, yet it still holds the
+        // collection, which makes it a carrier: a composite no world can share
+        assertEquals("carrier", roleOf(definition, "com.example.yard.Garage"));
         // And the car is a dependent even though nothing here names it as a foreign key
         assertEquals("dependent", roleOf(definition, "com.example.yard.Car"));
         assertEquals("enum", roleOf(definition, "com.example.yard.State"));
@@ -190,6 +191,69 @@ class SchemaDefinitionTest {
         // It is not a dependent: it sits in a record field, and only array membership makes owners
         assertEquals(List.of("owner", "child", "record"),
                 definition.records.get("com.example.yard.Garage").getRoles());
+        assertEquals(List.of("dependent", "child", "record"),
+                definition.records.get("com.example.yard.Car").getRoles());
+    }
+
+    @Test
+    void shouldRankCarrierNextToTheOwnerRoleItDerivesFrom() {
+        // Given a composite chain where only the innermost composite holds the collection
+        Schema.Parser parser = new Schema.Parser();
+        SchemaDefinition definition = new SchemaDefinition();
+        definition.addRecord(parser.parse("""
+                {
+                  "type": "record",
+                  "name": "Building",
+                  "namespace": "com.example.yard",
+                  "fields": [
+                    {"name": "buildingId", "type": "string", "primary": true},
+                    {"name": "address", "type": {
+                      "type": "record",
+                      "name": "Address",
+                      "fields": [{"name": "city", "type": "string"}]
+                    }},
+                    {"name": "zone", "type": {
+                      "type": "record",
+                      "name": "Zone",
+                      "fields": [
+                        {"name": "code", "type": "string"},
+                        {"name": "garage", "type": {
+                          "type": "record",
+                          "name": "Garage",
+                          "role": "child",
+                          "fields": [
+                            {"name": "cars", "type": {
+                              "type": "array",
+                              "items": {
+                                "type": "record",
+                                "name": "Car",
+                                "fields": [{"name": "carId", "type": "string", "primary": true}]
+                              }
+                            }}
+                          ]
+                        }}
+                      ]
+                    }}
+                  ]
+                }
+                """));
+        definition.findRoots();
+
+        // Then the holder carries: it owns the cars the way any owner does, but the annotation left
+        // it embedded, so it has no row of its own for them to point at. The composite that only
+        // embeds it owns them the same way, one step further up.
+        assertEquals(List.of("carrier", "child", "record"),
+                definition.records.get("com.example.yard.Garage").getRoles());
+        assertEquals(List.of("carrier", "child", "record"),
+                definition.records.get("com.example.yard.Zone").getRoles());
+
+        // While a composite beside that path is untouched by the split and stays a plain child
+        assertEquals(List.of("child", "record"),
+                definition.records.get("com.example.yard.Address").getRoles());
+
+        // And a record placed by an entity role of its own never carries: it is a row, so the
+        // records it owns point at it and that role handles them
+        assertEquals(List.of("root", "record"), definition.records.get("com.example.yard.Building").getRoles());
         assertEquals(List.of("dependent", "child", "record"),
                 definition.records.get("com.example.yard.Car").getRoles());
     }

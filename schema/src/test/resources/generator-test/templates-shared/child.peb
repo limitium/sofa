@@ -1,0 +1,9 @@
+{
+  "world": "shared", "type": "child",
+  "class": "{{entity.namespace}}.{{entity.name}}",
+  "fields": {
+    {% for field in entity.fields %}
+    "{{field.name}}": "{{field.type | javaType}}"{% if not loop.last %},{% endif %}
+    {% endfor %}
+  }
+}

@@ -62,6 +62,15 @@ skinparam class<<child>> {
     StereotypeFontColor #7755AA
 }
 
+' Carrier class style, an owner that stays embedded rather than becoming rows of its own
+skinparam class<<carrier>> {
+    BackgroundColor #EFEAF7
+    BorderColor #7755AA
+    ArrowColor #7755AA
+    FontColor #333333
+    StereotypeFontColor #AA5577
+}
+
 ' Regular record style
 skinparam class<<record>> {
     BackgroundColor #FFFFFF

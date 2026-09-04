@@ -4,6 +4,7 @@ import art.limitium.sofa.schema.Dependency;
 import art.limitium.sofa.schema.NamedEntity;
 import art.limitium.sofa.schema.Owner;
 import art.limitium.sofa.schema.SchemaAnnotations;
+import art.limitium.sofa.schema.SchemaShape;
 import org.apache.avro.Schema;
 
 import java.util.ArrayList;
@@ -86,7 +87,7 @@ public class AvroEntity implements Owner<AvroEntity>, Dependency<AvroEntity>, Na
         if (SchemaAnnotations.suppressesOwner(schema)) {
             return false;
         }
-        return schema.getFields().stream().anyMatch(f -> f.schema().getType() == Schema.Type.ARRAY && f.schema().getElementType().getType() == Schema.Type.RECORD);
+        return SchemaShape.ownsCollection(schema);
     }
 
     /**
@@ -114,6 +115,27 @@ public class AvroEntity implements Owner<AvroEntity>, Dependency<AvroEntity>, Na
     }
 
     /**
+     * Checks whether this record is a carrier, the embedded flavour of an owner.
+     * <p>
+     * An owner holds a collection and is a row of its own, so the rows it owns point back at it. A
+     * carrier owns the same way but is embedded into its parent, either because {@code "role":
+     * "child"} pinned it out of {@link #isOwner()} or because it owns through the composites it
+     * embeds rather than directly. Having no row to point at, the rows it owns belong to whatever
+     * encloses it, which is the walk {@code flattenOwners} makes.
+     * <p>
+     * That is what makes a carrier world specific where a plain composite is not: a denormalized
+     * world inlines the collection, a normalized one has moved it into a table, so the two cannot
+     * share the class, and neither can whatever embeds the carrier, up to the nearest root or
+     * dependent. Those are entities with a class per world anyway, which is also why a record
+     * placed by an entity role of its own never carries.
+     *
+     * @return true if the record owns a collection yet is embedded rather than stored as rows
+     */
+    public boolean isCarrier() {
+        return !isRoot && !isOwner() && !isOwnedEntity() && SchemaShape.reachesOwnership(schema);
+    }
+
+    /**
      * Lists the roles this entity qualifies for, most specific first.
      * <p>
      * This is the template selection ladder without the templates: it says what the record is, not
@@ -136,6 +158,9 @@ public class AvroEntity implements Owner<AvroEntity>, Dependency<AvroEntity>, Na
         }
         if (isOwner()) {
             roles.add("owner");
+        }
+        if (isCarrier()) {
+            roles.add("carrier");
         }
         if (isOwnedEntity()) {
             roles.add("dependent");

@@ -117,6 +117,10 @@
             "type": "long"
           },
           {
+            "name": "nested33Field",
+            "type": "com.example.avro.NestedRecord33"
+          },
+          {
             "name": "nnestedField",
             "type": "com.example.avro.NestedNestedRecord"
           }

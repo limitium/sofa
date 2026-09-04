@@ -1,0 +1,41 @@
+# Composites are generated once and shared by both worlds, the way a real pipeline does it:
+# `templates-fat` and `templates-norm` hold only entity templates and take everything else from
+# `templates-shared`.
+#
+#   Building -> [Level] -> Zone -> Garage -> [Car]
+#   Angar              -> Zone -> Garage -> [Car]
+#
+# Zone and Garage are composites, but Garage holds the collection that normalization splits out, so
+# neither of them can be shared: `templates-norm` renders both as carriers. Address, Dimensions and
+# Toolbox reach no collection and stay shared.
+schemas:
+  - schemas/polymorphic.avsc
+  - schemas/yard3-building.avsc
+  - schemas/yard3-angar.avsc
+
+generators:
+  - path: templates-shared
+    templates:
+      namespace: "{{schema.namespace}}.common"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/common"
+      filename: "{{name}}.json"
+
+  - path: templates-fat
+    overrides: templates-shared
+    templates:
+      namespace: "{{schema.namespace}}.messages"
+      name: "{{schema.name}}"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/messages"
+      filename: "{{name}}.json"
+
+  - path: templates-norm
+    overrides: templates-shared
+    templates:
+      namespace: "{{schema.namespace}}.entities"
+      name: "{{schema.name}}Entity"
+      fullname: "{{namespace}}.{{name}}"
+      folder: "generated/entities"
+      filename: "{{name}}.json"

@@ -103,7 +103,7 @@ public class {{ entity.name }}{
 
         {% for field in entity | flattenRecords('.') %}
             {%- set pojoRecord = field.type.record | from("pojo_entities")  -%}
-            {% if not pojoRecord.dependent and not pojoRecord.owner %}
+            {% if not pojoRecord.dependent and not pojoRecord.owner and not pojoRecord.carrier %}
                 {%- set pojoRecord = pojoRecord | from("pojo_common")  -%}
             {% endif %}
             root.{{ field.name | toCamelCase }} = new {{ pojoRecord.fullname }}() ;

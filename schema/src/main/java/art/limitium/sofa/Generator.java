@@ -270,6 +270,8 @@ public class Generator {
         if ((mainTemplates.containsKey("enum") && entity.schema.getType() == Schema.Type.ENUM)
                 || (mainTemplates.containsKey("root") && entity.schema.getType() == Schema.Type.RECORD && entity.isRoot)
                 || (mainTemplates.containsKey("owner") && entity.schema.getType() == Schema.Type.RECORD && entity.isOwner())
+                || (mainTemplates.containsKey("carrier") && entity.schema.getType() == Schema.Type.RECORD
+                        && entity.isCarrier())
                 || (mainTemplates.containsKey("dependent") && entity.schema.getType() == Schema.Type.RECORD
                         && entity.isOwnedEntity())
                 || (mainTemplates.containsKey("child") && entity.schema.getType() == Schema.Type.RECORD && !entity.isRoot)
@@ -368,6 +370,9 @@ public class Generator {
             } else if (mainTemplates.containsKey("owner") && recordEntity.isOwner()) {
                 Factory.logger.info("Generate owner {} into {}", recordEntity.getFullname(), fullFileName);
                 template = mainTemplates.get("owner");
+            } else if (mainTemplates.containsKey("carrier") && recordEntity.isCarrier()) {
+                Factory.logger.info("Generate carrier {} into {}", recordEntity.getFullname(), fullFileName);
+                template = mainTemplates.get("carrier");
             } else if (mainTemplates.containsKey("dependent") && recordEntity.isOwnedEntity()) {
                 Factory.logger.info("Generate dependent {} into {}", recordEntity.getFullname(), fullFileName);
                 template = mainTemplates.get("dependent");
@@ -448,6 +453,7 @@ public class Generator {
         RecordEntity recordEntity = (RecordEntity) entity;
         return (mainTemplates.containsKey("root") && recordEntity.isRoot())
                 || (mainTemplates.containsKey("owner") && recordEntity.isOwner())
+                || (mainTemplates.containsKey("carrier") && recordEntity.isCarrier())
                 || (mainTemplates.containsKey("dependent") && recordEntity.isOwnedEntity())
                 || (mainTemplates.containsKey("child") && !recordEntity.isRoot())
                 || mainTemplates.containsKey("record");

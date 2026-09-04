@@ -1,0 +1,76 @@
+{
+  "type": "record",
+  "name": "Building",
+  "namespace": "com.example.yard3",
+  "fields": [
+    {"name": "buildingId", "type": "string", "primary": true},
+    {
+      "name": "address",
+      "type": {
+        "type": "record",
+        "name": "Address",
+        "fields": [
+          {"name": "street", "type": "string"},
+          {"name": "city", "type": "string"}
+        ]
+      }
+    },
+    {
+      "name": "levels",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "Level",
+          "fields": [
+            {"name": "levelId", "type": "string", "primary": true},
+            {"name": "floorNo", "type": "int"},
+            {
+              "name": "dimensions",
+              "type": {
+                "type": "record",
+                "name": "Dimensions",
+                "fields": [
+                  {"name": "width", "type": "int"},
+                  {"name": "height", "type": "int"}
+                ]
+              }
+            },
+            {
+              "name": "zone",
+              "type": {
+                "type": "record",
+                "name": "Zone",
+                "fields": [
+                  {"name": "code", "type": "string"},
+                  {
+                    "name": "garage",
+                    "type": {
+                      "type": "record",
+                      "name": "Garage",
+                      "role": "child",
+                      "fields": [
+                        {"name": "capacity", "type": "int"},
+                        {
+                          "name": "toolbox",
+                          "type": {
+                            "type": "record",
+                            "name": "Toolbox",
+                            "fields": [
+                              {"name": "brand", "type": "string"}
+                            ]
+                          }
+                        },
+                        {"name": "cars", "type": {"type": "array", "items": "com.example.car.Car"}}
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

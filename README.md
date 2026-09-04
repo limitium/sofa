@@ -158,6 +158,34 @@ public class {{name}} {
 }
 ```
 
+### Carrier Template (`carrier.peb`)
+
+Used for carriers, the embedded flavour of an owner. An owner holds a collection and is a row of its
+own, so the records it owns point back at it. A carrier owns the same collection but stays embedded,
+either because `"role": "child"` pinned it out of the owner role or because it owns through the
+composites it embeds rather than directly. With no row to point at, the records it owns belong to
+whatever encloses it, so a carrier is every layer on the path from a collection up to the nearest
+record that is an entity of its own.
+
+This matters to pipelines that generate composites once and share them between a denormalized and a
+normalized world, the `pojo_common` plus `pojo_entities` shape below. The shared composite inlines
+its collection, while the normalized world has moved that collection into a table, so the two cannot
+be the same class - and neither can the composite that embeds it, up to the nearest entity.
+Composites beside that path reach no collection, are identical in both worlds, and stay shared.
+
+Give the normalized generator a `carrier.peb` and it writes its own class for exactly those layers,
+taking everything else from `overrides`. A generator without the template behaves as before, and
+borrows the shared composite.
+
+```java
+// Example carrier template usage: the composite, minus what is now a table
+public class {{name}} {
+    {% for field in entity.fields | noRecordLists %}
+    private {{field.type | javaType}} {{field.name}};
+    {% endfor %}
+}
+```
+
 ### Owner Template (`owner.peb`)
 Used for records that contain one-to-many relationships with other records. Owner records:
 - Manage collections of other entities
@@ -279,14 +307,16 @@ When multiple templates are available, SOFA selects the most specific template i
 1. `enum.peb` for enum types
 2. `root.peb` for root records
 3. `owner.peb` for records with collections
-4. `dependent.peb` for records owned by others
-5. `child.peb` for non-root records
-6. `record.peb` as final fallback for any record type
+4. `carrier.peb` for records that own a collection while staying embedded
+5. `dependent.peb` for records owned by others
+6. `child.peb` for non-root records
+7. `record.peb` as final fallback for any record type
 
 ### Role Aware Naming
 
 The `namespace`, `name` and `fullname` templates receive a `role` variable holding the role this
-generator resolved for the record - `enum`, `root`, `owner`, `dependent`, `child`, `record`, or
+generator resolved for the record - `enum`, `root`, `owner`, `carrier`, `dependent`, `child`,
+`record`, or
 `none` when the generator has no template for it. Naming can then follow the role rather than the
 generator, so one generator can emit composites and entities under different conventions:
 
@@ -313,8 +343,8 @@ Schema wide templates such as `schema.peb` see the same ladder without the templ
 `entity.role` for the most specific role and `entity.roles` for every role the record qualifies for,
 most specific first. A generator narrows `roles` to the templates it provides, while a consumer that
 renders every record alike takes `role`. The bundled `puml` generator uses it for its stereotypes,
-so a diagram distinguishes `<<root>>`, `<<owner>>`, `<<dependent>>` and `<<child>>` rather than
-labelling everything that is not a root a plain record.
+so a diagram distinguishes `<<root>>`, `<<owner>>`, `<<carrier>>`, `<<dependent>>` and `<<child>>`
+rather than labelling everything that is not a root a plain record.
 
 ## Schema Annotations
 
@@ -485,6 +515,49 @@ Moving `Car` into a library changes nothing about the generated classes. The lib
 `messages.Car` and `entities.CarEntity`; the consumer imports the coordinate and references both
 instead of regenerating them. The only thing a library cannot know is which entities will eventually
 own its records, which is precisely what the annotation makes unnecessary.
+
+### Deeper Graphs, and What Has to Change
+
+Add layers and the same rules keep applying, but which classes a world can share stops being
+obvious. Take one composite more between the root and the owned record, and a second root reaching
+the graph further down:
+
+```
+Building -> [Level] -> Zone -> Garage -> [Car]
+Angar               -> Zone -> Garage -> [Car]
+```
+
+`Level` sits in a collection, so it is an entity with a row of its own. `Zone` and `Garage` are
+composites, `Garage` holds the cars, and `Address`, `Dimensions` and `Toolbox` hang off the sides.
+The denormalized world is one fat document per root, so composites are generated once and both
+worlds take them from there:
+
+```yaml
+  - path: pojo_common     # child.peb
+  - path: pojo_messages   # root.peb
+    overrides: pojo_common
+  - path: pojo_entities   # root.peb, owner.peb, dependent.peb, carrier.peb
+    overrides: pojo_common
+```
+
+Normalizing splits `Car` out into rows, which takes the collection away from `Garage`. That is a
+different class from the shared one, and so `Zone`, which embeds `Garage`, needs its own class too:
+sharing it would drag the inlined cars straight back in. The change stops at the nearest entity,
+`Level` on one path and `Angar` on the other, because those have a class per world anyway. Those
+layers are the carriers:
+
+```
+com.example.yard.common.Garage        capacity, toolbox, cars: List<common.Car>
+com.example.yard.entities.Garage      capacity, toolbox: common.Toolbox
+com.example.yard.entities.Zone        code,     garage:  entities.Garage
+com.example.yard.entities.LevelEntity levelId, floorNo, dimensions: common.Dimensions, zone: entities.Zone
+com.example.car.entities.CarEntity    carId, model, ownerEntity, ownerId
+```
+
+Everything beside that path is untouched: `Address`, `Dimensions` and `Toolbox` reach no collection,
+so both worlds keep pointing at the one shared class. Ownership still walks up through composites to
+the nearest entity, which here lands on `LevelEntity` through `Building` and on `AngarEntity`
+through `Angar`, so `Car` is owned polymorphically.
 
 ## Template Functions
 

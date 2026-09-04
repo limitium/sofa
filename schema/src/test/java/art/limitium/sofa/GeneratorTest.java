@@ -10,9 +10,14 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -466,6 +471,116 @@ class GeneratorTest {
     }
 
     @Test
+    void shouldGiveEveryLayerBetweenACollectionAndItsRootAnEntityOfItsOwn() throws IOException {
+        // Given Building -> [Level] -> Zone -> Garage -> [Car], generated the way a real pipeline is:
+        // composites are written once by the shared generator and both worlds take them from there
+        String configPath = copyTestResources(
+                "test-config-carriers.yaml", "schemas", "templates-shared", "templates-fat", "templates-norm");
+
+        // When
+        Factory.main(new String[]{configPath});
+
+        // Then nothing in the normalized world reaches an inlined car. That is the whole point: a
+        // record stored as rows must not also arrive as a field of the row above it, and between
+        // Level and Car there are two composites that would carry it there.
+        assertFalse(classesReachedFrom("com.example.yard3.entities.LevelEntity")
+                        .contains("com.example.car.common.Car"),
+                "The normalized world reaches the shared, inlined car through its composites");
+
+        // While the shared composite does keep the collection inline, which is what the fat world wants
+        String sharedGarage = Files.readString(tempDir.resolve("generated/common/Garage.json"));
+        assertTrue(sharedGarage.contains("java.util.List<com.example.car.common.Car>"), sharedGarage);
+
+        // And the normalized world writes a composite of its own instead, without the collection,
+        // because the cars are rows there
+        String garage = Files.readString(tempDir.resolve("generated/entities/GarageEntity.json"));
+        assertTrue(garage.contains("\"type\": \"carrier\""), garage);
+        assertFalse(garage.contains("cars"), "The normalized composite still inlines the cars: " + garage);
+
+        // And so does every layer above it, up to the nearest entity. Sharing Zone would pull the
+        // shared Garage, and with it the inlined cars, straight back into the normalized world.
+        String zone = Files.readString(tempDir.resolve("generated/entities/ZoneEntity.json"));
+        assertTrue(zone.contains("\"garage\": \"com.example.yard3.entities.GarageEntity\""), zone);
+        String level = Files.readString(tempDir.resolve("generated/entities/LevelEntity.json"));
+        assertTrue(level.contains("\"zone\": \"com.example.yard3.entities.ZoneEntity\""), level);
+        String angar = Files.readString(tempDir.resolve("generated/entities/AngarEntity.json"));
+        assertTrue(angar.contains("\"zone\": \"com.example.yard3.entities.ZoneEntity\""), angar);
+
+        // And the split itself works as it does with one layer: the root drops the collection and
+        // the link lives on the split off entity, pointing at whatever the walk up reaches first.
+        // That is the dependent below Building on one path and the root itself on the other.
+        String building = Files.readString(tempDir.resolve("generated/entities/BuildingEntity.json"));
+        assertFalse(building.contains("levels"), "The normalized root still holds the collection: " + building);
+        String car = Files.readString(tempDir.resolve("generated/entities/CarEntity.json"));
+        assertTrue(car.contains("LevelEntity") && car.contains("AngarEntity"),
+                "Ownership should walk through both composites: " + car);
+
+    }
+
+    @Test
+    void shouldReachRowsItAlreadyStoresWhenTheNormalizedWorldHasNoCarrierTemplate() throws IOException {
+        // Given the same pipeline with the carrier template taken away, which is the setup this
+        // started from: the normalized generator holds entity templates only, so every composite
+        // comes from the shared generator
+        String configPath = copyTestResources(
+                "test-config-carriers.yaml", "schemas", "templates-shared", "templates-fat", "templates-norm");
+        Files.delete(tempDir.resolve("templates-norm").resolve("carrier.peb"));
+
+        // When
+        Factory.main(new String[]{configPath});
+
+        // Then the entity between the root and the car is written, and the car is split into rows
+        // of its own, exactly as it should be
+        assertTrue(Files.exists(tempDir.resolve("generated/entities/LevelEntity.json")));
+        assertTrue(Files.exists(tempDir.resolve("generated/entities/CarEntity.json")));
+
+        // And yet the normalized entity reaches those same cars a second time, inlined. Zone and
+        // Garage are borrowed from the shared world, where the collection is still part of the
+        // document, so every car is both a row and a field of the row that encloses it.
+        assertTrue(classesReachedFrom("com.example.yard3.entities.LevelEntity")
+                        .contains("com.example.car.common.Car"),
+                "Expected the borrowed composites to drag the inlined cars into the normalized world");
+        assertFalse(Files.exists(tempDir.resolve("generated/entities/GarageEntity.json")),
+                "Without the template there is nothing to write the normalized composite with");
+    }
+
+    @Test
+    void shouldShareCompositesThatReachNoCollectionWithBothWorlds() throws IOException {
+        // Given the same graph, where Address, Dimensions and Toolbox sit beside the path from the
+        // collection to its roots rather than on it
+        String configPath = copyTestResources(
+                "test-config-carriers.yaml", "schemas", "templates-shared", "templates-fat", "templates-norm");
+
+        // When
+        Factory.main(new String[]{configPath});
+
+        // Then they are written once and never again as entities of their own
+        for (String composite : List.of("Address", "Dimensions", "Toolbox")) {
+            assertTrue(Files.exists(tempDir.resolve("generated/common/" + composite + ".json")),
+                    composite + " should be written by the shared generator");
+            assertFalse(Files.exists(tempDir.resolve("generated/entities/" + composite + "Entity.json")),
+                    composite + " reaches no collection, so normalizing leaves it alone");
+        }
+
+        // And the normalized world points at the shared class at every depth, including from inside
+        // a composite that did need one of its own
+        String building = Files.readString(tempDir.resolve("generated/entities/BuildingEntity.json"));
+        assertTrue(building.contains("\"address\": \"com.example.yard3.common.Address\""), building);
+        String level = Files.readString(tempDir.resolve("generated/entities/LevelEntity.json"));
+        assertTrue(level.contains("\"dimensions\": \"com.example.yard3.common.Dimensions\""), level);
+        String garage = Files.readString(tempDir.resolve("generated/entities/GarageEntity.json"));
+        assertTrue(garage.contains("\"toolbox\": \"com.example.yard3.common.Toolbox\""), garage);
+
+        // While the fat world takes everything from the shared generator, composites on the path
+        // included, so it stays one denormalized document all the way down
+        String message = Files.readString(tempDir.resolve("generated/messages/Building.json"));
+        assertTrue(message.contains("java.util.List<com.example.yard3.common.Level>"), message);
+        assertTrue(message.contains("\"address\": \"com.example.yard3.common.Address\""), message);
+        assertFalse(Files.exists(tempDir.resolve("generated/messages/Garage.json")),
+                "The fat world has no composites of its own");
+    }
+
+    @Test
     void shouldProduceTheSameClassesWhetherOrNotTheRecordLivesInALibrary() throws IOException {
         // Given the same schemas generated twice: once all in one module, once with Car published by
         // a library and imported. Both use the same naming conventions.
@@ -493,6 +608,35 @@ class GeneratorTest {
             ((com.fasterxml.jackson.databind.node.ObjectNode) actual).remove("ownedBy");
             assertEquals(expected, actual, "Class shape changed when moved into a library: " + name);
         });
+    }
+
+    /**
+     * Follows class references out of a generated class, through every world, and answers with what
+     * it can reach. Templates emit the class they generated under `class` and their field types as
+     * strings, so a reference is a field value mentioning another generated class.
+     */
+    private Set<String> classesReachedFrom(String startClass) throws IOException {
+        Map<String, JsonNode> byClass = new HashMap<>();
+        try (java.util.stream.Stream<Path> files = Files.walk(tempDir.resolve("generated"))) {
+            for (Path file : files.filter(Files::isRegularFile).toList()) {
+                JsonNode generated = objectMapper.readTree(Files.readString(file));
+                byClass.put(generated.get("class").asText(), generated);
+            }
+        }
+
+        Set<String> reached = new LinkedHashSet<>();
+        Deque<String> pending = new ArrayDeque<>(List.of(startClass));
+        while (!pending.isEmpty()) {
+            JsonNode generated = byClass.get(pending.poll());
+            if (generated == null) {
+                continue;
+            }
+            generated.get("fields").forEach(field -> byClass.keySet().stream()
+                    .filter(klass -> field.asText().contains(klass))
+                    .filter(reached::add)
+                    .forEach(pending::add));
+        }
+        return reached;
     }
 
     private Map<String, JsonNode> readGenerated(Path root) throws IOException {

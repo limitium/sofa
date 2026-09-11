@@ -68,7 +68,7 @@ public class {{ entity.name }} implements Converter {
             {% endfor %}
             {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             {% set owner = owners[0] | from("pojo_entities") %}
-                .field("{{ owner.name | toSnakeCase | upper }}_ID", Schema.INT64_SCHEMA)
+                .field("{{ owner.name | toSnakeCase | upper }}_ID", {{ owners[0].primaryKey.type | connectSchemaType }})
             {% endif %}
             {% if entity.polymorphicallyOwned %}
                 .field("OWNER_ENTITY", Schema.STRING_SCHEMA)

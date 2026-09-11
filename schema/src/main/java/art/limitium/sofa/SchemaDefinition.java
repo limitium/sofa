@@ -69,13 +69,16 @@ public class SchemaDefinition {
      * <p>
      * Records that pin themselves to a non root role via annotations are excluded even when nothing
      * in this module references them: a composite or a polymorphically owned record is not an
-     * aggregate root just because its owner happens to live in another module.
+     * aggregate root just because its owner happens to live in another module. A record pinned
+     * {@code "role": "root"} goes the other way and stays a root even where something embeds it,
+     * which is how a library keeps a record an aggregate root across a boundary that reuses it.
      */
     public List<AvroEntity> findRoots() {
         List<String> dependencies = records.values().stream().flatMap(n -> n.dependencies.keySet().stream()).collect(Collectors.toList());
         roots = records.values().stream()
                 .filter(avroEntity -> avroEntity.schema.getType() == Schema.Type.RECORD)
-                .filter(avroEntity -> !dependencies.contains(avroEntity.getFullname()))
+                .filter(avroEntity -> !dependencies.contains(avroEntity.getFullname())
+                        || SchemaAnnotations.isDeclaredRoot(avroEntity.schema))
                 .filter(avroEntity -> !SchemaAnnotations.suppressesRoot(avroEntity.schema))
                 .peek(avroEntity -> avroEntity.isRoot = true)
                 .collect(Collectors.toList());
@@ -88,7 +91,7 @@ public class SchemaDefinition {
     public List<AvroEntity> findAnnotatedRecords() {
         return records.values().stream()
                 .filter(avroEntity -> avroEntity.schema.getType() == Schema.Type.RECORD)
-                .filter(avroEntity -> SchemaAnnotations.suppressesRoot(avroEntity.schema))
+                .filter(avroEntity -> SchemaAnnotations.pinsRole(avroEntity.schema))
                 .collect(Collectors.toList());
     }
 

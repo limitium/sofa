@@ -119,9 +119,10 @@ public class AvroEntity implements Owner<AvroEntity>, Dependency<AvroEntity>, Na
      * <p>
      * An owner holds a collection and is a row of its own, so the rows it owns point back at it. A
      * carrier owns the same way but is embedded into its parent, either because {@code "role":
-     * "child"} pinned it out of {@link #isOwner()} or because it owns through the composites it
-     * embeds rather than directly. Having no row to point at, the rows it owns belong to whatever
-     * encloses it, which is the walk {@code flattenOwners} makes.
+     * "child"} pinned it out of {@link #isOwner()}, because it owns through the composites it embeds
+     * rather than directly, or because {@code "role": "carrier"} pinned it where the module can see
+     * no collection at all. Having no row to point at, the rows it owns belong to whatever encloses
+     * it, which is the walk {@code flattenOwners} makes.
      * <p>
      * That is what makes a carrier world specific where a plain composite is not: a denormalized
      * world inlines the collection, a normalized one has moved it into a table, so the two cannot
@@ -132,7 +133,8 @@ public class AvroEntity implements Owner<AvroEntity>, Dependency<AvroEntity>, Na
      * @return true if the record owns a collection yet is embedded rather than stored as rows
      */
     public boolean isCarrier() {
-        return !isRoot && !isOwner() && !isOwnedEntity() && SchemaShape.reachesOwnership(schema);
+        return !isRoot && !isOwner() && !isOwnedEntity()
+                && (SchemaAnnotations.isDeclaredCarrier(schema) || SchemaShape.reachesOwnership(schema));
     }
 
     /**

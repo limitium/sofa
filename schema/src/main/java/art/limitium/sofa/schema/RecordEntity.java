@@ -116,15 +116,17 @@ public class RecordEntity extends Entity implements Owner<Entity>, Dependency<Re
     /**
      * Checks whether this record is a carrier, the embedded flavour of an owner.
      * <p>
-     * True when the record owns a collection, directly or through the composites it embeds, yet is
-     * placed by no entity role of its own and so has no row for the records it owns to point at.
+     * True when the record owns a collection, directly or through the composites it embeds, or is
+     * pinned {@code "role": "carrier"}, yet is placed by no entity role of its own and so has no row
+     * for the records it owns to point at.
      * A denormalized world inlines that collection while a normalized one moves it into a table, so
      * the two cannot share the class, and neither can whatever embeds it.
      *
      * @return true if the record owns a collection yet is embedded rather than stored as rows
      */
     public boolean isCarrier() {
-        return !isRoot && !isOwner() && !isOwnedEntity() && SchemaShape.reachesOwnership(getSchema());
+        return !isRoot && !isOwner() && !isOwnedEntity()
+                && (SchemaAnnotations.isDeclaredCarrier(getSchema()) || SchemaShape.reachesOwnership(getSchema()));
     }
 
     /**

@@ -22,7 +22,7 @@ public class {{ entity.name }}{
 
         {% endfor %}
         {% if owners.size == 1 and not entity.polymorphicallyOwned %}
-            public long {{ owners[0].name | toCamelCase }}Id;
+            public {{ owners[0].primaryKey.type | javaType }} {{ owners[0].name | toCamelCase }}Id;
         {% endif %}
         {% if entity.polymorphicallyOwned %}
             public String ownerEntity;
@@ -45,11 +45,11 @@ public class {{ entity.name }}{
     {% if owners.size > 0 or entity.polymorphicallyOwned %}
         {% if owners.size == 1 and not entity.polymorphicallyOwned %}
 
-            public void set{{ owners[0].name | toCamelCase | capitalize }}Id(long val){
+            public void set{{ owners[0].name | toCamelCase | capitalize }}Id({{ owners[0].primaryKey.type | javaType }} val){
                 this.{{ owners[0].name | toCamelCase }}Id = val;
             }
 
-            public long get{{ owners[0].name | toCamelCase |capitalize }}Id(){
+            public {{ owners[0].primaryKey.type | javaType }} get{{ owners[0].name | toCamelCase |capitalize }}Id(){
                 return this.{{ owners[0].name | toCamelCase }}Id;
             }
 

@@ -1,0 +1,80 @@
+{
+  "type": "record",
+  "name": "Root6",
+  "namespace": "com.example.avro6",
+  "doc": "A dependent that exercises every branch of builder_entities/dependent.peb: a string primary key on the owner, so the foreign key is not a long; a dependent that also owns a collection, so it reaches dependent.peb with record lists in it; and bytes, array<string> and an underscored array<enum> on the way through.",
+  "fields": [
+    {
+      "name": "root6_id",
+      "type": {
+        "type": "string",
+        "primary": true
+      }
+    },
+    {
+      "name": "ledgers",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "Ledger6",
+          "fields": [
+            {
+              "name": "ledger_id",
+              "type": {
+                "type": "string",
+                "primary": true
+              }
+            },
+            {
+              "name": "payload",
+              "type": "bytes"
+            },
+            {
+              "name": "notes",
+              "type": {
+                "type": "array",
+                "items": "string"
+              }
+            },
+            {
+              "name": "tag_list",
+              "type": {
+                "type": "array",
+                "items": {
+                  "type": "enum",
+                  "name": "Tag6",
+                  "symbols": ["UNKNOWN", "RED", "BLUE"],
+                  "default": "UNKNOWN"
+                }
+              }
+            },
+            {
+              "name": "entries",
+              "type": {
+                "type": "array",
+                "items": {
+                  "type": "record",
+                  "name": "Entry6",
+                  "fields": [
+                    {
+                      "name": "entry_id",
+                      "type": {
+                        "type": "string",
+                        "primary": true
+                      }
+                    },
+                    {
+                      "name": "amount",
+                      "type": "long"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -101,10 +101,7 @@ public class Factory {
         if (!annotated.isEmpty()) {
             logger.info("Records pinning their role by annotation {}: \r\n{}", annotated.size(),
                     String.join("\r\n", annotated.stream()
-                            .map(e -> e.getFullname() + " -> "
-                                    + (SchemaAnnotations.isPolymorphicallyOwned(e.schema)
-                                            ? SchemaAnnotations.OWNERSHIP + ": " + SchemaAnnotations.OWNERSHIP_POLYMORPHIC
-                                            : SchemaAnnotations.ROLE + ": " + SchemaAnnotations.ROLE_CHILD))
+                            .map(e -> e.getFullname() + " -> " + SchemaAnnotations.describe(e.schema))
                             .toList()));
         }
 

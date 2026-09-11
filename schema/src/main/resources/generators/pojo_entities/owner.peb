@@ -13,6 +13,23 @@ public class {{ entity.name }}{
 {#        {% endif %}#}
     {% endfor %}
 
+    {% set owners = entity | flattenOwners %}
+    {% if owners.size > 0 or entity.polymorphicallyOwned %}
+        //Links do dependents {{ owners.size }} total
+        //Todo: check entities
+        {% for owner in owners %}
+            //{{ owner.name }}
+
+        {% endfor %}
+        {% if owners.size == 1 and not entity.polymorphicallyOwned %}
+            public {{ owners[0].primaryKey.type | javaType }} {{ owners[0].name | toCamelCase }}Id;
+        {% endif %}
+        {% if entity.polymorphicallyOwned %}
+            public String ownerEntity;
+            public long ownerId;
+        {% endif %}
+    {% endif %}
+
     {% for field in entity.fields | noRecordLists%}
 
         public void set{{ field.name | toCamelCase | capitalize }}({{ field.type | javaType }} val){
@@ -24,4 +41,36 @@ public class {{ entity.name }}{
         }
 
     {% endfor %}
+
+    {% if owners.size > 0 or entity.polymorphicallyOwned %}
+        {% if owners.size == 1 and not entity.polymorphicallyOwned %}
+
+            public void set{{ owners[0].name | toCamelCase | capitalize }}Id({{ owners[0].primaryKey.type | javaType }} val){
+                this.{{ owners[0].name | toCamelCase }}Id = val;
+            }
+
+            public {{ owners[0].primaryKey.type | javaType }} get{{ owners[0].name | toCamelCase |capitalize }}Id(){
+                return this.{{ owners[0].name | toCamelCase }}Id;
+            }
+
+        {% endif %}
+        {% if entity.polymorphicallyOwned %}
+
+            public void setOwnerEntity(String val){
+                this.ownerEntity = val;
+            }
+
+            public void setOwnerId(long val){
+                this.ownerId = val;
+            }
+
+            public String getOwnerEntity(){
+                return this.ownerEntity;
+            }
+
+            public long getOwnerId(){
+                return this.ownerId;
+            }
+        {% endif %}
+    {% endif %}
 }

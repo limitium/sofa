@@ -12,6 +12,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -56,6 +59,64 @@ class GeneratorsTest {
                 "OWNER_ENTITY backs a String and must not be numeric: " + table);
         assertTrue(table.contains("<column name=\"OWNER_ID\" type=\"bigint\" />"),
                 "OWNER_ID backs a long and must not be a varchar: " + table);
+    }
+
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void shouldRoundTripADependentThroughItsFlatbufferBuilder() throws Exception {
+        // Given the generated code for Ledger6, a dependent that also owns a collection, whose owner
+        // has a string primary key, and which carries bytes, an array of strings and an array of enums
+        Factory.main(new String[]{"src/main/resources/def.yaml"});
+        compileAndLoadGeneratedJavaFiles();
+
+        Class<?> pojoClass = compiledClassLoader.loadClass("com.example.avro6.entities.pojo.Ledger6");
+        Class<?> builderClass = compiledClassLoader.loadClass("com.example.avro6.entities.builder.Ledger6Builder");
+        Class<?> tagClass = compiledClassLoader.loadClass("com.example.avro6.common.pojo.Tag6");
+        Object red = Enum.valueOf((Class<Enum>) tagClass, "RED");
+
+        Object pojo = pojoClass.getDeclaredConstructor().newInstance();
+        pojoClass.getField("ledgerId").set(pojo, "L-1");
+        pojoClass.getField("payload").set(pojo, new byte[]{1, 2, 3});
+        pojoClass.getField("notes").set(pojo, List.of("first", "second"));
+        pojoClass.getField("tagList").set(pojo, List.of(red));
+        pojoClass.getField("root6Id").set(pojo, "R-1");
+
+        // When the buffer is built and read back. Serializing at all is the point: a builder that
+        // never calls finish() throws here rather than returning a buffer
+        Object flatbuffer = builderClass.getMethod("buildFlatbufferFrom", pojoClass).invoke(null, pojo);
+        Object read = builderClass.getMethod("buildPojoFrom", flatbuffer.getClass()).invoke(null, flatbuffer);
+
+        // Then every field survives the round trip
+        assertEquals("L-1", pojoClass.getField("ledgerId").get(read));
+        assertArrayEquals(new byte[]{1, 2, 3}, (byte[]) pojoClass.getField("payload").get(read));
+        assertEquals(List.of("first", "second"), pojoClass.getField("notes").get(read));
+        assertEquals(List.of(red), pojoClass.getField("tagList").get(read));
+
+        // Including the foreign key, which is a String here rather than the long the pojo used to
+        // assume for every owner
+        assertEquals("R-1", pojoClass.getField("root6Id").get(read));
+        assertEquals(String.class, pojoClass.getField("root6Id").getType());
+    }
+
+    @Test
+    void shouldLeaveOwnedCollectionsOutOfADependentsOwnTable() throws IOException {
+        // Given Ledger6, which owns the entries collection and is owned by Root6
+        Factory.main(new String[]{"src/main/resources/def.yaml"});
+
+        String builder = Files.readString(Path.of(
+                "build/generated/sources/java/main/com/example/avro6/entities/builder/Ledger6Builder.java"));
+        String pojo = Files.readString(Path.of(
+                "build/generated/sources/java/main/com/example/avro6/entities/pojo/Ledger6.java"));
+
+        // Then in the normalized world the entries are rows of their own, so neither the pojo nor the
+        // buffer this builder writes carries them
+        assertFalse(pojo.contains("entries"), "Entries are a table of their own here: " + pojo);
+        assertFalse(builder.contains("entries"), "The builder must not add a field nothing declares: " + builder);
+
+        // And the record that is an owner still gets the link to its own owner
+        assertTrue(pojo.contains("public String root6Id;"), "Expected the foreign key on the pojo: " + pojo);
+        assertTrue(builder.contains("addFbRoot6Id"), "Expected the foreign key on the buffer: " + builder);
     }
 
     private void compileAndLoadGeneratedJavaFiles() throws IOException {

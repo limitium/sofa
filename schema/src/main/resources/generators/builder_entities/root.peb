@@ -35,7 +35,7 @@ public class {{ entity.name }}{
                 {%- if field.type.elementType.name == 'enum' -%}
                     {%- set fbmnum = field.type.elementType.enum | from("flatbuffers_entities") -%}
 
-                    byte[] {{ fbFieldName }}Offsets = new byte[root.{{ field.name | replace({'_':'.'}) }}.size()];
+                    byte[] {{ fbFieldName }}Offsets = new byte[root.{{ fieldName }}.size()];
                     for (int i = 0; i < root.{{ fieldName }}.size(); i++) {
                         {{ fbFieldName }}Offsets[i] = findEnumIndex({{ fbmnum.fullname }}.names, root.{{ fieldName }}.get(i));
                     }

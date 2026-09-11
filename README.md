@@ -162,8 +162,9 @@ public class {{name}} {
 
 Used for carriers, the embedded flavour of an owner. An owner holds a collection and is a row of its
 own, so the records it owns point back at it. A carrier owns the same collection but stays embedded,
-either because `"role": "child"` pinned it out of the owner role or because it owns through the
-composites it embeds rather than directly. With no row to point at, the records it owns belong to
+either because `"role": "child"` pinned it out of the owner role, because it owns through the
+composites it embeds rather than directly, or because `"role": "carrier"` pinned it where no
+collection in the schema gives the split away. With no row to point at, the records it owns belong to
 whatever encloses it, so a carrier is every layer on the path from a collection up to the nearest
 record that is an entity of its own.
 
@@ -348,9 +349,11 @@ rather than labelling everything that is not a root a plain record.
 
 ## Schema Annotations
 
-Roles like root, child and dependent are inferred from the dependency graph, which means they are a
-property of the set of schemas a module happens to load. The same record resolves differently in a
-library and in its consumers. Two record level annotations pin the parts that cannot be inferred.
+Roles are inferred from the dependency graph, which means they are a property of the set of schemas a
+module happens to load. The same record resolves differently in a library and in its consumers. A
+library is the sharp case: nothing there references the records it exists to publish and nothing
+there owns them, so every one of them looks like an aggregate root, and the classes it generates
+collide with what its consumers resolve. Two record level annotations pin what cannot be inferred.
 They live in the `.avsc`, so they travel with the schema into every module that reads it.
 
 ```json
@@ -358,6 +361,7 @@ They live in the `.avsc`, so they travel with the schema into every module that 
   "type": "record",
   "name": "Car",
   "namespace": "com.example.car",
+  "role": "dependent",
   "ownership": "polymorphic",
   "fields": [
     {"name": "carId", "type": "string", "primary": true},
@@ -366,22 +370,45 @@ They live in the `.avsc`, so they travel with the schema into every module that 
 }
 ```
 
-- **`"ownership": "polymorphic"`** - the record is owned through an `ownerEntity`/`ownerId` pair
-  rather than a named foreign key, so records that do not exist yet can own it. It becomes eligible
-  for `dependent.peb` with no owners at all, which removes the need for placeholder owner records.
-  Requires a field marked `"primary": true`, since the record is stored as a row.
-- **`"role": "child"`** - the record is a composite always embedded into its parent. It is pinned to
-  the `child` role: never a root, never an owner, never a dependent. Ownership is inferred
-  structurally from holding an array of records, and a composite embedded in several entities has
-  several owners, so without this a pure composite becomes a table of its own.
+**`"role"`** pins the place on the [role ladder](#template-selection-priority) the record holds,
+whatever the current module can see. It takes any of the five entity roles:
 
-Both are mutually exclusive, both suppress root-ness, and both reject unknown values at load time.
+| Role | Means | Pins |
+|---|---|---|
+| `root` | An aggregate root even where something embeds it | Root on, where it would otherwise be lost to a reference |
+| `owner` | A row of its own that holds a collection | Root off; the record must hold an array of records |
+| `carrier` | Holds a collection while staying embedded, so no world shares its class | Root, owner and dependent off, carrier on |
+| `dependent` | A row of its own, owned by entities this module cannot name | Root off, dependent on; requires an `ownership` |
+| `child` | A composite always embedded into its parent | Root, owner and dependent off |
 
-Note that `ownership` answers two separate questions, and they are kept apart: whether the record is
-an owned entity at all, which decides the role, and how its ownership is represented, which decides
-between a named foreign key and the `ownerEntity`/`ownerId` pair. Ownership is represented
-polymorphically when the schema declares it *or* when more than one entity reaches the record, since
-a single named key cannot express that. A record embedded in two roots is not thereby an entity.
+`child` and `carrier` pin the same thing - embedded, no row of its own - and which of the two a
+record lands on is otherwise structural, from the collection it reaches. Declaring `carrier` asserts
+the split where no collection shows it, as when the composite embeds a polymorphically owned record:
+a denormalized world carries that record inline, a normalized one points at its row, and the two
+cannot share the class.
+
+**`"ownership": "polymorphic"`** answers a different question: not whether the record is an owned
+entity, but how its link back to its owner is shaped. An `ownerEntity`/`ownerId` pair rather than a
+named foreign key, so records that do not exist yet can own it. Requires a field marked
+`"primary": true`, since the record is stored as a row. Ownership is represented polymorphically when
+the schema declares it *or* when more than one entity reaches the record, since a single named key
+cannot express that.
+
+The two meet on `dependent` only. A record pinned there is owned by nothing the module can name, so
+there is no name for its foreign key to take, and it has to say how the link is shaped - which for
+now means declaring `"ownership": "polymorphic"` alongside it. On any other role an `ownership`
+contradicts the pin and is rejected, as is a `dependent` without one.
+
+Declaring `"ownership": "polymorphic"` on its own keeps working and stays the shortest way to say
+"an owned entity, owners elsewhere": it makes the record eligible for `dependent.peb` with no owners
+at all, which removes the need for placeholder owner records. Adding `"role": "dependent"` says the
+same thing in the vocabulary of the ladder.
+
+Every pin is checked at load time, and a pin the ladder cannot honour is rejected rather than
+silently resolved: `"role": "owner"` on a record that holds no collection, or `"role": "dependent"`
+on one that does, since `owner` sits above `dependent` and would win.
+
+A record embedded in two roots is not thereby an entity.
 
 The primary key marker is accepted either on the field (`{"name": "id", "type": "string", "primary":
 true}`) or inside its type (`{"name": "id", "type": {"type": "string", "primary": true}}`).
@@ -447,8 +474,10 @@ For each imported record and each generator, one of three things happens:
 
 The middle case is the one worth knowing about. It happens when a record is, say, a root in the
 library and a composite in the consumer, so the library's `pojo_common` produced nothing for it while
-the consumer's needs it. Pin the role with `"role": "child"` or `"ownership": "polymorphic"` and
-republish the library.
+the consumer's needs it. Inside its own boundary a library has no owners to read the role off, so the
+role has to be declared: pin it with [`"role"`](#schema-annotations) - `child`, `carrier`, `owner`,
+`dependent` alongside `"ownership": "polymorphic"`, or `root` to keep it a root where a consumer
+embeds it - and republish the library.
 
 ## Worked Example
 

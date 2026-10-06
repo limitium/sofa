@@ -25,6 +25,7 @@ public class {{ entity.name }}{
             {%- set fieldName = field.name | toCamelCase -%}
             {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
             {%- if field.type.name == 'array' -%}
+                if (dependent.{{ fieldName }} != null) {
                 {%- if field.type.elementType.name == 'string' -%}
                     int[] {{ fbFieldName }}Offsets = dependent.{{ fieldName }}.stream()
                         .map(flatBufferBuilder::createString)
@@ -44,6 +45,7 @@ public class {{ entity.name }}{
 
                     {{ fbFieldName }} = {{ fbe.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
+                }
             {%- endif %}
              {%- if field.type.name == 'string' -%}
                 {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
@@ -60,7 +62,7 @@ public class {{ entity.name }}{
         {% endfor %}
 
         {% if entity.polymorphicallyOwned %}
-            int ownerEntity = flatBufferBuilder.createString(dependent.ownerEntity);
+            int ownerEntity = dependent.ownerEntity != null ? flatBufferBuilder.createString(dependent.ownerEntity) : 0;
         {% endif %}
         {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             {%- set pojoOwner = owners[0] | from("pojo_entities") %}
@@ -88,10 +90,14 @@ public class {{ entity.name }}{
                     {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
-                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    if ({{ fbFieldName }} != 0) {
+                        {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    }
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    if ({{ fbFieldName }} != 0) {
+                        {{ fbe.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    }
                 {%- endif -%}
                 {%- if field.type.name == 'record' -%}
                     if (dependent.{{ fieldName }} != null) {
@@ -109,7 +115,13 @@ public class {{ entity.name }}{
         {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             {% set fbOwner = owners[0] | from("flatbuffers_entities") %}
             {% set pojoOwner = owners[0] | from("pojo_entities") %}
-            {{ fbe.name }}.add{{ fbOwner.name }}Id(flatBufferBuilder, {% if owners[0].primaryKey.type.name == 'string' %}foreignKeyOffset{% else %}dependent.{{ pojoOwner.name | toCamelCase }}Id{% endif %});
+            {% if owners[0].primaryKey.type.name == 'string' %}
+            if (foreignKeyOffset != 0) {
+                {{ fbe.name }}.add{{ fbOwner.name }}Id(flatBufferBuilder, foreignKeyOffset);
+            }
+            {% else %}
+            {{ fbe.name }}.add{{ fbOwner.name }}Id(flatBufferBuilder, dependent.{{ pojoOwner.name | toCamelCase }}Id);
+            {% endif %}
         {% endif %}
             {% if entity.polymorphicallyOwned %}
                 //Todo: check entities
@@ -117,7 +129,9 @@ public class {{ entity.name }}{
                     //{{ owner.name }}
 
                 {% endfor %}
-                {{ fbe.name }}.addOwnerEntity(flatBufferBuilder, ownerEntity);
+                if (ownerEntity != 0) {
+                    {{ fbe.name }}.addOwnerEntity(flatBufferBuilder, ownerEntity);
+                }
                 {{ fbe.name }}.addOwnerId(flatBufferBuilder, dependent.ownerId);
             {% endif %}
         {% endif %}
@@ -155,12 +169,12 @@ public class {{ entity.name }}{
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {%- if field.type.elementType.name == 'string' -%}
-                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->fbDependent.{{ fbFieldName }}Vector().get(i)).toList();
+                        dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}Vector() == null ? null : java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->fbDependent.{{ fbFieldName }}Vector().get(i)).toList();
                     {%- endif -%}
                     {%- if field.type.elementType.name == 'enum' -%}
                         {% set pojoEnum = field.type.elementType.enum | from("pojo_common") %}
                         {%- set fbmnum = field.type.elementType.enum | from("flatbuffers_entities") -%}
-                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->findEnum({{ pojoEnum.fullname }}.values(), {{ fbmnum.fullname }}.name(fbDependent.{{ fbFieldName }}Vector().get(i)))).toList();
+                        dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}Vector() == null ? null : java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->findEnum({{ pojoEnum.fullname }}.values(), {{ fbmnum.fullname }}.name(fbDependent.{{ fbFieldName }}Vector().get(i)))).toList();
                     {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}

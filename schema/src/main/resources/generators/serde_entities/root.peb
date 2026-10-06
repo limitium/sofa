@@ -14,6 +14,9 @@ public class {{ entity.name }} implements Serde<{{ pojo.fullname }}> {
     @Override
     public Serializer<{{ pojo.fullname }}> serializer() {
         return (topic, data) -> {
+            if(data == null) {
+                return null;
+            }
             return {{ b.fullname }}.buildFlatbufferFrom(data).getByteBuffer().array();
         };
     }

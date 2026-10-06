@@ -161,6 +161,14 @@ public class {{ entity.name }} implements Converter {
             {% endif %}
 
         {% endfor -%}
+        {% if owners.size == 1 and not entity.polymorphicallyOwned %}
+            {% set owner = owners[0] | from("pojo_entities") %}
+            obj.{{ owner.name | toCamelCase }}Id = struct.{{ owners[0].primaryKey.type | connectStructGetter }}("{{ owner.name | toSnakeCase | upper }}_ID");
+        {% endif %}
+        {% if entity.polymorphicallyOwned %}
+            obj.ownerEntity = struct.getString("OWNER_ENTITY");
+            obj.ownerId = struct.getInt64("OWNER_ID");
+        {% endif %}
         return obj;
     }
 

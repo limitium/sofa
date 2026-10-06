@@ -22,6 +22,7 @@ public class {{ entity.name }}{
             {%- set fieldName = field.name | toCamelCase -%}
             {%- set fbFieldName = fieldName | replace({'.':'_'}) | toCamelCase -%}
             {%- if field.type.name == 'array' -%}
+                if (dependent.{{ fieldName }} != null) {
                 {%- if field.type.elementType.name == 'string' -%}
 
                     int[] {{ fbFieldName }}Offsets = dependent.{{ fieldName }}.stream()
@@ -52,6 +53,7 @@ public class {{ entity.name }}{
 
                     {{ fbFieldName }} = {{ fbm.name }}.create{{ fbFieldName | capitalize }}Vector(flatBufferBuilder, {{ fbFieldName }}Offsets);
                 {%- endif -%}
+                }
             {%- endif %}
             {%- if field.type.name == 'string' -%}
                 {{ fbFieldName }} = dependent.{{ fieldName }} != null ? flatBufferBuilder.createString(dependent.{{ fieldName }}) : 0;
@@ -87,10 +89,14 @@ public class {{ entity.name }}{
                     {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, findEnumIndex({{ fbmnum.fullname }}.names, dependent.{{ fieldName }}));
                 {%- endif -%}
                 {%- if field.type.name == 'array' -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    if ({{ fbFieldName }} != 0) {
+                        {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    }
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}
-                    {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    if ({{ fbFieldName }} != 0) {
+                        {{ fbm.name }}.add{{ fbFieldName | capitalize }}(flatBufferBuilder, {{ fbFieldName }});
+                    }
                 {%- endif -%}
                 {%- if field.type.name == 'record' -%}
                     if (dependent.{{ fieldName }} != null) {
@@ -130,15 +136,15 @@ public class {{ entity.name }}{
                     {%- endif -%}
                 {%- if field.type.name == 'array' -%}
                     {%- if field.type.elementType.name == 'string' -%}
-                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->fbDependent.{{ fbFieldName }}Vector().get(i)).toList();
+                        dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}Vector() == null ? null : java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->fbDependent.{{ fbFieldName }}Vector().get(i)).toList();
                     {%- endif -%}
                     {%- if field.type.elementType.name == 'enum' -%}
                         {% set pojoEnum = field.type.elementType.enum | from("pojo_common") %}
                         {%- set fbmnum = field.type.elementType.enum | from("flatbuffers_messages") -%}
-                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->findEnum({{ pojoEnum.fullname }}.values(), {{ fbmnum.fullname }}.name(fbDependent.{{ fbFieldName }}Vector().get(i)))).toList();
+                        dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}Vector() == null ? null : java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->findEnum({{ pojoEnum.fullname }}.values(), {{ fbmnum.fullname }}.name(fbDependent.{{ fbFieldName }}Vector().get(i)))).toList();
                     {%- endif -%}
                     {%- if field.type.elementType.name == 'record' -%}
-                        dependent.{{ fieldName }} = java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->{{ field.type.elementType.record.fullname }}.buildPojoFrom(fbDependent.{{ fbFieldName }}Vector().get(i))).toList();
+                        dependent.{{ fieldName }} = fbDependent.{{ fbFieldName }}Vector() == null ? null : java.util.stream.IntStream.range(0, fbDependent.{{ fbFieldName }}Length()).mapToObj(i->{{ field.type.elementType.record.fullname }}.buildPojoFrom(fbDependent.{{ fbFieldName }}Vector().get(i))).toList();
                     {%- endif -%}
                 {%- endif -%}
                 {%- if field.type.name == 'bytes' -%}

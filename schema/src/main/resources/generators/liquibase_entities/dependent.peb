@@ -24,7 +24,7 @@
         {% endfor %}
         {% if owners.size == 1 and not entity.polymorphicallyOwned %}
             {% set owner = owners[0] | from("pojo_entities") %}
-            <column name="{{ owner.name | toSnakeCase | upper }}_ID" type="bigint" />
+            <column name="{{ owner.name | toSnakeCase | upper }}_ID" type="{{ owners[0].primaryKey.type | liquidBaseType }}" />
         {% endif %}
         {% if entity.polymorphicallyOwned %}
             <column name="OWNER_ENTITY" type="varchar2(255)" />
